@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학습 노트 — dbt 1차 (Track A · jaffle_shop)</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222b35; --ink:#e7edf3; --muted:#9aa7b4;
+    --line:#2e3a46; --accent:#ff694a; --accent2:#3aa0a0; --gold:#d9a441; --silver:#b9c2cc; --bronze:#cd7f32;
+    --green:#46b66b; --code:#0b0f14;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.7;font-size:16px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px 120px}
+  header{padding:54px 0 30px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;color:var(--accent);
+    letter-spacing:.5px;font-size:14px;text-transform:uppercase}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  h1{font-size:34px;margin:14px 0 6px;line-height:1.25}
+  .sub{color:var(--muted);font-size:15px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:5px 13px;font-size:13px;color:var(--muted)}
+  .chip b{color:var(--ink);font-weight:600}
+  nav.toc{position:sticky;top:0;background:rgba(15,20,25,.92);backdrop-filter:blur(8px);
+    z-index:5;border-bottom:1px solid var(--line);margin:0 -22px 36px;padding:12px 22px;display:flex;
+    gap:8px;flex-wrap:wrap}
+  nav.toc a{color:var(--muted);text-decoration:none;font-size:13.5px;padding:4px 10px;border-radius:8px}
+  nav.toc a:hover{background:var(--panel2);color:var(--ink)}
+  section{margin:46px 0;scroll-margin-top:64px}
+  h2{font-size:24px;margin:0 0 6px;display:flex;align-items:center;gap:11px}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;
+    background:var(--accent);color:#fff;border-radius:9px;font-size:15px;font-weight:700}
+  h3{font-size:18px;margin:30px 0 8px;color:var(--ink)}
+  p{margin:10px 0;color:#d4dde6}
+  .lead{color:var(--muted);font-size:15px;margin-top:2px}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;
+    background:#11181f;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#ffd9cf}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:11px;padding:16px 18px;
+    overflow:auto;margin:14px 0;font-size:13.5px;line-height:1.6}
+  pre code{background:none;border:none;padding:0;color:#cfe0ee}
+  .cmt{color:#5d6b78}
+  .kw{color:#ff8a6b}.str{color:#8fd694}.fn{color:#76b9e8}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:var(--panel)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:16px 0}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+  .layer{border-radius:13px;padding:16px;border:1px solid var(--line);background:var(--panel)}
+  .layer .tag{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .layer h4{margin:8px 0 4px;font-size:16px}
+  .layer p{font-size:13px;color:var(--muted);margin:2px 0}
+  .l-bronze{border-top:3px solid var(--bronze)} .l-bronze .tag{color:var(--bronze)}
+  .l-silver{border-top:3px solid var(--silver)} .l-silver .tag{color:var(--silver)}
+  .l-gold{border-top:3px solid var(--gold)} .l-gold .tag{color:var(--gold)}
+  figure{margin:22px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:12px;overflow:hidden}
+  figure img{width:100%;border-radius:8px;display:block;border:1px solid var(--line)}
+  figcaption{color:var(--muted);font-size:13px;margin-top:10px;padding:0 4px 4px}
+  figcaption b{color:var(--ink)}
+  .flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+    margin:16px 0;font-size:13.5px}
+  .flow .b{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 13px;font-weight:600}
+  .flow .b.bronze{border-color:var(--bronze);color:#f0c79a}
+  .flow .b.silver{border-color:var(--silver);color:#dfe6ee}
+  .flow .b.gold{border-color:var(--gold);color:#f0d394}
+  .flow .arr{color:var(--accent2);font-size:18px}
+  .note{border-left:3px solid var(--accent2);background:rgba(58,160,160,.08);
+    padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px}
+  .warn{border-left:3px solid var(--gold);background:rgba(217,164,65,.08);
+    padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px}
+  .ok{color:var(--green);font-weight:700}
+  .step{display:flex;gap:16px;margin:8px 0;padding:16px 0;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:none}
+  .step .idx{flex:0 0 38px;height:38px;border-radius:50%;background:var(--panel2);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:var(--accent)}
+  .step .body{flex:1}
+  .step .body h4{margin:4px 0 6px;font-size:16px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;
+    background:rgba(70,182,107,.15);color:var(--green);margin-left:8px;vertical-align:middle}
+  .badge.todo{background:rgba(154,167,180,.15);color:var(--muted)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:14px;margin:8px 0}
+  .kv .k{color:var(--muted)}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  .pipemap{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;color:#9fc7c7}
+  hr.soft{border:none;border-top:1px dashed var(--line);margin:26px 0}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}h1{font-size:27px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="dot"></span> dbt · DataFusion 학습 · Track A 1차</div>
+  <h1>학습 노트 — dbt 첫 파이프라인 체득<br><span style="color:var(--muted);font-size:24px">jaffle_shop_duckdb로 seed → staging → marts 1회전</span></h1>
+  <div class="sub">"직접 쳐보고 → 결과를 관찰하고 → 기록한다"의 1차 결과 정리. dbt가 어떻게 SQL을 컴파일하고, 무엇을 빌드하며, 계보(lineage)가 어떻게 그려지는지를 손으로 확인한 노트.</div>
+  <div class="meta">
+    <span class="chip">환경 <b>macOS · Python 3.9.6</b></span>
+    <span class="chip">dbt-core <b>1.10.22</b></span>
+    <span class="chip">어댑터 <b>dbt-duckdb (duckdb 1.10.0)</b></span>
+    <span class="chip">데이터셋 <b>jaffle_shop (워밍업)</b></span>
+    <span class="chip">결과 <b class="ok">dbt build PASS=28</b></span>
+    <span class="chip">기록일 <b>2026-06-11</b></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#overview">개요</a>
+  <a href="#structure">프로젝트 구조</a>
+  <a href="#flow">실습 순서</a>
+  <a href="#build">build로 나온 것</a>
+  <a href="#ref">ref() 치환</a>
+  <a href="#lineage">계보(lineage)</a>
+  <a href="#errata">정오표</a>
+  <a href="#next">다음 단계</a>
+</nav>
+
+<!-- ============ 개요 ============ -->
+<section id="overview">
+  <h2><span class="n">0</span> 한눈에 — 무엇을 했나</h2>
+  <p class="lead">계획서의 "dbt 골격" 단계를 jaffle_shop 데모로 1회전 돌렸다. 핵심은 dbt의 3가지 동작을 눈으로 확인한 것:</p>
+  <div class="card">
+    <div class="kv">
+      <span class="k">① 빌드</span><span><code>dbt build</code> 한 방으로 <b>seed 적재 → 모델 생성 → 테스트</b>가 의존 순서대로 실행됨</span>
+      <span class="k">② 컴파일</span><span><code>{{ ref('...') }}</code> 가 컴파일 시 <b>실제 DB 식별자</b>로 치환됨 (Jinja → SQL)</span>
+      <span class="k">③ 계보</span><span>모델 간 의존이 <b>DAG(lineage 그래프)</b>로 자동 생성됨 — <code>raw → stg → marts</code></span>
+    </div>
+  </div>
+  <div class="note"><b>왜 jaffle_shop인가?</b> CSV가 seed로 동봉되어 다운로드가 필요 없고, seed·model·test·docs라는 dbt 전체 흐름을 1분 안에 체감할 수 있는 dbt 공식 데모라서. 본편(Olist 실데이터)에 들어가기 전 "워밍업"용.</div>
+</section>
+
+<!-- ============ 구조 ============ -->
+<section id="structure">
+  <h2><span class="n">1</span> 프로젝트 구조 — 무엇이 어디에</h2>
+  <p class="lead">dbt 프로젝트는 "폴더 규칙"이 곧 동작이다. 어느 폴더에 무엇을 두느냐가 dbt가 그것을 어떻게 다룰지를 결정한다.</p>
+<pre><code>jaffle_shop_duckdb/
+├── <span class="fn">dbt_project.yml</span>      <span class="cmt"># 프로젝트 정의 · materialization 기본값 · 노드 색</span>
+├── <span class="fn">profiles.yml</span>         <span class="cmt"># 연결 정보(DuckDB 파일 경로) — DBT_PROFILES_DIR로 지정</span>
+├── seeds/                  <span class="cmt"># CSV → dbt seed 시 실제 테이블로 적재</span>
+│   ├── raw_customers.csv   <span class="cmt"># 100행</span>
+│   ├── raw_orders.csv      <span class="cmt"># 99행</span>
+│   └── raw_payments.csv    <span class="cmt"># 113행</span>
+├── models/
+│   ├── staging/            <span class="cmt"># +materialized: view (가벼운 정제·표준화)</span>
+│   │   ├── stg_customers.sql
+│   │   ├── stg_orders.sql
+│   │   ├── stg_payments.sql
+│   │   └── schema.yml      <span class="cmt"># staging 모델의 테스트 정의</span>
+│   ├── customers.sql       <span class="cmt"># +materialized: table (마트 — 고객 집계)</span>
+│   ├── orders.sql          <span class="cmt"># +materialized: table (마트 — 주문 집계)</span>
+│   └── schema.yml          <span class="cmt"># 마트 모델의 설명 + 테스트</span>
+└── target/                 <span class="cmt"># ⚙️ dbt가 생성: 컴파일된 SQL · manifest · catalog</span>
+    ├── compiled/...        <span class="cmt"># Jinja가 풀린 순수 SQL (ref 치환 확인 지점)</span>
+    └── run/...             <span class="cmt"># 실제로 DB에 실행된 DDL/DML</span></code></pre>
+
+  <h3>materialization = 폴더별 기본 설정 (dbt_project.yml)</h3>
+  <p>같은 SQL이라도 <b>materialization</b> 설정에 따라 물리 객체가 달라진다. jaffle은 폴더 단위로 기본값을 준다:</p>
+  <div class="grid">
+    <div class="layer l-bronze">
+      <div class="tag">● seeds</div>
+      <h4>raw_*</h4>
+      <p>CSV → <b>실제 테이블</b></p>
+      <p>node_color: bronze</p>
+    </div>
+    <div class="layer l-silver">
+      <div class="tag">● models/staging</div>
+      <h4>stg_*</h4>
+      <p>+materialized: <b>view</b></p>
+      <p>node_color: silver</p>
+    </div>
+    <div class="layer l-gold">
+      <div class="tag">● models (root)</div>
+      <h4>customers · orders</h4>
+      <p>+materialized: <b>table</b></p>
+      <p>node_color: gold</p>
+    </div>
+  </div>
+  <div class="note">이 색 설정(<code>bronze / silver / gold</code>)이 뒤의 lineage 그래프에서 노드 색으로 그대로 나타난다 — 설정과 시각화가 1:1로 연결됨을 직접 확인.</div>
+</section>
+
+<!-- ============ 실습 순서 ============ -->
+<section id="flow">
+  <h2><span class="n">2</span> 실습 순서 — 어떤 행위로 어떤 결과가</h2>
+  <p class="lead">START_1차.md의 STEP을 따라 진행. "행위 → 산출물" 관점으로 정리.</p>
+
+  <div class="card">
+    <div class="step">
+      <div class="idx">0</div>
+      <div class="body">
+        <h4>환경 준비 <span class="badge">완료</span></h4>
+        <p>venv 생성 후 <code>dbt-duckdb</code> 한 방 설치 (dbt-core + duckdb 어댑터 + duckdb 라이브러리 동시).</p>
+<pre><code><span class="kw">python3</span> -m venv venv && <span class="kw">source</span> venv/bin/activate
+pip install dbt-duckdb
+dbt --version   <span class="cmt"># Core 1.10.22 / duckdb 1.10.0 확인</span></code></pre>
+        <p><b>산출물:</b> <code>dbt-poc/venv/</code> · dbt CLI 사용 가능</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="idx">1</div>
+      <div class="body">
+        <h4>jaffle 빌드 — 전체 흐름 1회전 <span class="badge">완료</span></h4>
+        <p>레포 clone 후 프로젝트 폴더 안에서 빌드. (Python 3.9 → dbt 1.10 고정이라 <code>--no-version-check</code> 필요)</p>
+<pre><code><span class="kw">cd</span> jaffle_shop_duckdb
+<span class="kw">export</span> DBT_PROFILES_DIR=<span class="str">"$PWD"</span>   <span class="cmt"># 이 폴더의 profiles.yml 사용</span>
+dbt build --no-version-check</code></pre>
+        <p><b>산출물:</b> <code>jaffle_shop.duckdb</code>(~1.5MB) 생성 · <code>target/</code>에 컴파일·실행 SQL · <span class="ok">PASS=28</span></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="idx">2</div>
+      <div class="body">
+        <h4>내부 들여다보기 — ref() 치환 확인 <span class="badge">완료</span></h4>
+        <p>컴파일된 SQL과 원본을 대조하고, DuckDB에 실제로 생긴 객체를 조회.</p>
+<pre><code><span class="kw">cat</span> target/compiled/jaffle_shop/models/customers.sql
+python -c <span class="str">"import duckdb; con=duckdb.connect('jaffle_shop.duckdb'); print(con.sql('show tables'))"</span></code></pre>
+        <p><b>산출물:</b> ref() → 완전수식 식별자 치환 확인 · 8개 객체(raw/stg/마트) 확인</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="idx">3</div>
+      <div class="body">
+        <h4>문서·계보 — docs generate / serve <span class="badge">완료</span></h4>
+        <p><code>dbt docs generate</code>로 catalog 생성 후 <code>dbt docs serve</code>로 브라우저에서 lineage 확인 (이 노트의 캡처들).</p>
+        <p><b>산출물:</b> <code>target/catalog.json</code> · 브라우저 lineage DAG</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="idx">4</div>
+      <div class="body">
+        <h4>만져보기 — 모델 수정·테스트 깨보기 <span class="badge todo">다음 본편에서</span></h4>
+        <p>모델 한 줄 수정 후 <code>dbt run -s</code>, not_null 컬럼에 null 넣어 테스트 실패 메시지 보기. Olist 본편에서 직접 모델을 작성하며 체득 예정.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ build 결과 ============ -->
+<section id="build">
+  <h2><span class="n">3</span> <code>dbt build</code>가 실제로 한 일</h2>
+  <p class="lead">출력 마지막 줄: <code>Finished running 3 seeds, 2 table models, 20 data tests, 3 view models … PASS=28 WARN=0 ERROR=0 SKIP=0</code></p>
+  <table>
+    <thead><tr><th>리소스</th><th>개수</th><th>무엇</th><th>결과</th></tr></thead>
+    <tbody>
+      <tr><td>seeds</td><td>3</td><td>raw_customers / raw_orders / raw_payments (CSV → 테이블)</td><td class="ok">적재</td></tr>
+      <tr><td>view 모델</td><td>3</td><td>stg_customers / stg_orders / stg_payments</td><td class="ok">생성</td></tr>
+      <tr><td>table 모델</td><td>2</td><td>customers / orders (마트)</td><td class="ok">생성</td></tr>
+      <tr><td>data tests</td><td>20</td><td>unique · not_null · accepted_values · relationships</td><td class="ok">전부 PASS</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>핵심 관찰 — 위상정렬:</b> <code>build</code>는 seed/model/test를 <b>하나의 DAG</b>로 묶어 의존 순서대로 실행한다. 관찰된 순서는 <code>seed 적재 → stg_*(view) → stg 테스트 → customers/orders(table) → 마트 테스트</code>. 상위가 실패하면 하위는 SKIP되는데, 이번엔 전부 PASS라 SKIP은 발생하지 않았다. <span style="color:var(--muted)">(SKIP 재현은 품질·이력 주차의 과제)</span></div>
+
+  <h3>테스트 4종이 어디서 오는가 (schema.yml)</h3>
+  <p>테스트는 SQL이 아니라 <b>YAML 선언</b>으로 붙인다. 예: staging의 <code>schema.yml</code></p>
+<pre><code><span class="kw">models</span>:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests:
+          - <span class="fn">unique</span>          <span class="cmt"># 중복 없음</span>
+          - <span class="fn">not_null</span>        <span class="cmt"># null 없음</span>
+      - name: status
+        tests:
+          - <span class="fn">accepted_values</span>:  <span class="cmt"># 허용된 값만</span>
+              arguments:
+                values: [<span class="str">'placed'</span>,<span class="str">'shipped'</span>,<span class="str">'completed'</span>,<span class="str">'return_pending'</span>,<span class="str">'returned'</span>]</code></pre>
+  <p>마트 <code>orders</code>의 <code>customer_id</code>엔 <code>relationships</code> 테스트(→ customers.customer_id 참조 무결성)가 붙어 있어 4종이 모두 등장한다.</p>
+</section>
+
+<!-- ============ ref 치환 ============ -->
+<section id="ref">
+  <h2><span class="n">4</span> 핵심 개념 — <code>ref()</code> 가 컴파일되며 바뀐다</h2>
+  <p class="lead">dbt의 마법은 여기에 있다. 모델은 Jinja 템플릿이고, dbt가 이를 <b>순수 SQL로 컴파일</b>하면서 <code>ref()</code>를 실제 테이블 식별자로 치환한다. 그래서 모델 간 의존이 자동으로 추적된다.</p>
+  <div class="grid" style="grid-template-columns:1fr 1fr">
+    <div class="layer" style="border-top:3px solid var(--accent)">
+      <div class="tag" style="color:var(--accent)">원본 (models/customers.sql)</div>
+<pre style="margin-top:10px"><code>select * from {{ <span class="fn">ref</span>(<span class="str">'stg_customers'</span>) }}</code></pre>
+    </div>
+    <div class="layer" style="border-top:3px solid var(--green)">
+      <div class="tag" style="color:var(--green)">컴파일본 (target/compiled/…)</div>
+<pre style="margin-top:10px"><code>select * from <span class="str">"jaffle_shop"."main"."stg_customers"</span></code></pre>
+    </div>
+  </div>
+  <p><b>관찰:</b> <code>ref('stg_customers')</code> → <code>"&lt;database&gt;"."&lt;schema&gt;"."&lt;model&gt;"</code> 즉 <code>"jaffle_shop"."main"."stg_customers"</code> 3단 완전수식 식별자로 치환됨. 하드코딩한 테이블명이 아니라 <code>ref()</code>를 쓰기 때문에 dbt가 의존을 알고 실행 순서를 잡을 수 있다.</p>
+
+  <h3>DuckDB에 실제로 생긴 객체 (<code>show tables</code>)</h3>
+  <div class="flow">
+    <span class="b bronze">raw_customers</span><span class="b bronze">raw_orders</span><span class="b bronze">raw_payments</span>
+    <span class="arr">→</span>
+    <span class="b silver">stg_customers</span><span class="b silver">stg_orders</span><span class="b silver">stg_payments</span>
+    <span class="arr">→</span>
+    <span class="b gold">customers</span><span class="b gold">orders</span>
+  </div>
+  <p class="lead" style="text-align:center">한 <code>jaffle_shop.duckdb</code> 파일 안에 raw(테이블)·stg(view)·마트(table) 8개가 공존</p>
+
+  <figure>
+    <img src="img/note_01_customers_model.png" alt="dbt docs customers 모델 상세 페이지">
+    <figcaption><b>그림 1.</b> <code>dbt docs</code>의 <b>customers</b> 모델 상세. 상단 RELATION=<code>jaffle_shop.main.customers</code>, TYPE=table. 컬럼별 타입·설명·테스트(customer_id에 U·N)와 하단 "Referenced By"(이 모델을 참조하는 테스트들)까지 자동 문서화된다.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ lineage ============ -->
+<section id="lineage">
+  <h2><span class="n">5</span> 계보(lineage) — 의존이 그래프가 된다</h2>
+  <p class="lead"><code>ref()</code>로 묶인 의존 관계를 dbt가 DAG로 시각화한다. manifest에서 추출한 부모 관계는 다음과 같다:</p>
+<pre class="pipemap"><code>customers      &lt;- [stg_customers, stg_orders, stg_payments]
+orders         &lt;- [stg_orders, stg_payments]
+stg_customers  &lt;- [raw_customers]
+stg_orders     &lt;- [raw_orders]
+stg_payments   &lt;- [raw_payments]</code></pre>
+
+  <figure>
+    <img src="img/note_03_lineage_full.png" alt="전체 lineage DAG: raw → stg → customers">
+    <figcaption><b>그림 2.</b> 풀스크린 lineage 그래프. 왼쪽 <b>raw_*</b>(주황=bronze seed) → 가운데 <b>stg_*</b>(은색=silver view) → 오른쪽 <b>customers</b>(보라=gold 마트). 노드 색이 <code>dbt_project.yml</code>의 <code>node_color</code> 설정과 정확히 일치한다. 하단 <code>--select +customers+</code>는 customers의 조상·자손을 모두 보겠다는 노드 선택 문법.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="img/note_02_lineage.png" alt="customers 모델의 lineage 사이드 패널">
+    <figcaption><b>그림 3.</b> 모델 상세에서 우하단 초록 버튼으로 연 lineage 사이드 패널. customers가 <b>stg_customers·stg_orders·stg_payments</b> 셋에 의존함을 한눈에. 같은 정보가 상세 페이지의 "Depends On" 섹션에도 텍스트로 표시된다.</figcaption>
+  </figure>
+
+  <div class="note"><b>왜 중요한가:</b> 이 계보는 사람이 그린 게 아니라 <code>ref()</code>로부터 <b>자동 생성</b>된 것. 모델이 수백 개로 늘어도 의존·영향 범위·실행 순서가 코드(=ref)에서 그대로 도출된다 — 이것이 dbt가 "변환 계층의 표준"이 된 이유.</div>
+</section>
+
+<!-- ============ 정오표 ============ -->
+<section id="errata">
+  <h2><span class="n">6</span> 정오표 — 이론 노트와 달랐거나 새로 안 것</h2>
+  <table>
+    <thead><tr><th>항목</th><th>실습으로 확인한 사실</th></tr></thead>
+    <tbody>
+      <tr><td><code>ref()</code> 치환 형태</td><td>막연히 "테이블명으로 바뀐다"가 아니라 <code>"db"."schema"."name"</code> <b>3단 완전수식</b>으로 치환됨(DuckDB 어댑터 기준). compiled SQL을 직접 열어야 체감된다.</td></tr>
+      <tr><td>materialization = 물리 객체</td><td>stg_*는 <b>view</b>, 마트는 <b>table</b>로 실제로 다르게 생성됨. <code>show tables</code>에 view도 함께 보인다. 같은 SQL이라도 폴더 설정이 객체 종류를 결정.</td></tr>
+      <tr><td><code>build</code> 위상정렬</td><td>seed·model·test가 한 DAG로 묶여 의존 순서대로 실행. 상위 실패 시 하위 SKIP(이번엔 전부 PASS라 미발생).</td></tr>
+      <tr><td>Python 3.9 → dbt 1.10 고정 <span style="color:var(--gold)">⚠️ 환경 제약</span></td><td>계획서에 없던 제약. jaffle 레포가 dbt≥1.11을 요구해 매 명령에 <code>--no-version-check</code> 필요. 근본 해결은 Python 3.11+로 venv 재생성(→ dbt 1.11).</td></tr>
+    </tbody>
+  </table>
+  <div class="warn"><b>운영 팁:</b> 터미널 세션에서 <code>export DBT_PROFILES_DIR="$PWD"</code> 와 <code>export DBT_VERSION_CHECK=false</code> 두 개를 잡아두면 이후 <code>dbt build</code>·<code>docs serve</code> 등을 플래그 없이 깔끔하게 칠 수 있다.</div>
+</section>
+
+<!-- ============ 다음 ============ -->
+<section id="next">
+  <h2><span class="n">7</span> 1차 완료 기준 & 다음 단계</h2>
+  <table>
+    <thead><tr><th>Track A 1차 완료 기준</th><th>상태</th></tr></thead>
+    <tbody>
+      <tr><td>jaffle로 dbt 전체 흐름 1회전 (build·ref·lineage·로그)</td><td><span class="ok">✅ 완료</span></td></tr>
+      <tr><td>Olist로 staging→intermediate→marts + generic/singular 테스트</td><td><span class="badge todo">다음 본편</span></td></tr>
+      <tr><td>snapshots(SCD2) 1회 관찰 · docs lineage 확인</td><td><span class="badge todo">예정</span></td></tr>
+      <tr><td>(선택) TPC-H 소규모 정규화 모델링</td><td><span class="badge todo">선택</span></td></tr>
+    </tbody>
+  </table>
+  <div class="card">
+    <h3 style="margin-top:0">→ 다음: Olist 9개 테이블 staging 스캐폴딩 (본편)</h3>
+    <p>실제 브라질 이커머스 주문 ~10만 건의 9개 관계형 CSV로, jaffle에서 본 흐름을 <b>직접 모델을 작성하며</b> 확장한다. 조인·파생(intermediate), 집계 마트(fct_daily_sales), generic+singular 테스트, snapshots(SCD2)까지.</p>
+    <p class="pipemap">olist_orders → stg_orders → fct_orders / fct_daily_sales<br>
+    olist_customers → stg_customers → dim_customers<br>
+    olist_order_items → stg_order_items → int_order_enriched (조인·파생)</p>
+    <p style="color:var(--muted);font-size:14px">선결: Olist CSV는 Kaggle 다운로드(계정 필요) — 데이터 확보 방식부터 정한 뒤 staging 작성.</p>
+  </div>
+</section>
+
+<footer>
+  <p>학습 노트 · Track A 1차 (jaffle_shop) · 작성 2026-06-11 · 출처: <code>실습로그.md</code> · <code>START_1차.md</code> · <code>dbt docs</code>(localhost:8080) 캡처</p>
+  <p>관련 문서: 학습 계획서 (dbt·DataFusion).md · 데이터셋 Track A — 1차 학습.md · dbt (이론).md</p>
+</footer>
+
+</div>
+</body>
+</html>

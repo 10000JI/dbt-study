@@ -1,0 +1,11 @@
+
+    
+    
+    truncate table "jaffle_shop"."main"."raw_customers";
+    -- dbt seed --
+    
+          COPY "jaffle_shop"."main"."raw_customers" FROM '/Users/n-mjkim/workspace2/test_20260603/dbt-poc/jaffle_shop_duckdb/seeds/raw_customers.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  
