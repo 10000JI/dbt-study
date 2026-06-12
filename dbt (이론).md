@@ -89,7 +89,7 @@ dbt의 동작은 본질적으로 두 단계다 (Tristan Handy의 정의):
 - 종류: **Trusted Adapters**(dbt Labs의 신뢰 프로그램 충족) vs **Community Adapters**(커뮤니티 유지).
 ![alt text](image.png)
 
-> 대표적으로 dbt는 dbt-postgres를 사용한다.
+> 이번 실습 프로젝트(`jaffle_shop_duckdb`)는 **dbt-duckdb** 어댑터를 쓴다 — 별도 DW 서버 없이 로컬 파일(`jaffle_shop.duckdb`) 하나로 동작해 설치·실행이 가볍다. (튜토리얼에서 흔히 보이는 `dbt-postgres`와 달리 DB 서버 기동이 필요 없다.)
 
 
 ### 4.3 Jinja 템플릿팅 — "SQL을 위한 프로그래밍 환경"
