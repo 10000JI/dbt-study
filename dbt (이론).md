@@ -464,6 +464,39 @@ dbt Labs 공식 Best Practices 가이드는 프로젝트를 **3개 변환 레이
 
 > 🔬 **실습 검증**: jaffle는 **staging + marts 2계층만** 존재(intermediate 없음): `stg_*`(view) → `customers`/`orders`(table). 3계층(staging→intermediate→marts)과 `int_`/`fct_`/`dim_` 네이밍, generic+singular 테스트, snapshots(SCD2)는 **Olist 본편**에서 직접 모델을 작성하며 검증 예정.
 
+### 9.1 "표준"의 정체 — 컨벤션 vs 엔진 규칙 (강제 아님)
+
+위 레이어링·네이밍은 **dbt 엔진이 강제하는 문법 규칙이 아니라, dbt Labs가 공식 권장하는 관례(convention)** 다. 둘을 구분하면:
+
+| 무엇이 정하나 | 강제성 | 예 |
+| --- | --- | --- |
+| **dbt 엔진 규칙** | 강제(O) — 어기면 동작 안 함 | `.sql`은 `models/`에, 참조는 `ref()`, materialization은 폴더/`config()` 설정으로 결정 |
+| **레이어링·네이밍 컨벤션** | 권장(X) — 어겨도 동작함 | `stg_/int_/fct_/dim_` 접두사, raw 1:1 staging, 3계층 구조 |
+
+- **핵심**: dbt는 `stg_`라는 **이름을 전혀 해석하지 않는다**. view가 되는 건 이름이 아니라 **`models/staging/` 폴더에 걸린 `+materialized: view`** 때문(→ 5.7·6.4 config 우선순위). 파일을 루트로 옮기면 이름이 `stg_`여도 table이 된다.
+- 그럼에도 **사실상의 업계 표준**이라 대부분의 dbt 프로젝트가 이 구조를 따른다. 신규 합류자가 관례를 알면 프로젝트 구조를 즉시 파악할 수 있다는 게 컨벤션의 가치.
+
+> **config 우선순위(같은 모델에 여러 설정이 겹칠 때)**: `파일 안 {{ config() }}` > 하위 폴더 설정 > 상위 폴더 설정 > 프로젝트 기본값. (가장 구체적인 설정이 이김) → `stg_*`가 view인 이유: 프로젝트 기본 `+materialized: table`을 `staging:` 폴더의 `+materialized: view`가 덮어쓰기 때문.
+
+### 9.2 실무에서 staging 모델은 누가 만드나 — 직접 작성 + 자동 생성
+
+jaffle의 `stg_*.sql`은 **튜토리얼이 미리 제공**한 것이고, **실무에선 분석 엔지니어가 직접 작성**한다. 표준 흐름:
+
+```
+EL 도구(Fivetran 등)가 raw 적재   ← 내 일 아님
+   → source 선언(_sources.yml)     ← 내가 함
+   → raw 1개당 stg_ 모델 1개 작성   ← 내가 함 (컬럼명 정리·캐스팅·표준화)
+   → stg를 ref()로 쌓아 마트 작성    ← 내가 함
+```
+
+- **원칙: raw 테이블 1개 = staging 모델 1개(1:1)**. raw가 50개면 stg 파일도 50개.
+- raw가 많을 때 손으로 다 짜지 않도록 **`dbt-codegen` 패키지**로 뼈대를 자동 생성한다:
+  - `generate_source` → `_sources.yml` 초안 생성
+  - `generate_base_model` → source 컬럼을 읽어 `stg_*` SQL 초안 출력 → 복사 후 정리만 손봄
+- *(주의)* codegen은 **편의 도구**일 뿐 표준은 아니다. **진짜 표준은 "raw→stg 1:1 + 레이어 구조"**이며, 자동 생성 여부는 선택.
+
+> 🔬 **실습 검증**: **1차 미검증**(jaffle은 stg가 이미 제공됨 → "만들어진 걸 분석"). source 선언·codegen 설치·신규 stg 직접 작성은 별도 Sources/실무 재현 실습에서 확인 예정.
+
 ---
 
 ## 10. 지원 데이터 플랫폼 (어댑터)
