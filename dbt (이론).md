@@ -309,6 +309,8 @@ columns:
   - 훅: `on-run-start`, `on-run-end`
 - **문법 규칙**: 이 파일에서는 다중 단어 키에 **대시**(`model-paths`), 다른 YAML에서는 **언더스코어**. config는 폴더명과 구분하려 **`+` 접두사**(`+materialized: table`).
 
+> 🔬 **실습 검증**: jaffle `dbt_project.yml` 실측 — `name: jaffle_shop` ↔ `profile: jaffle_shop`이 **동일 문자열로 매칭**(이게 `profiles.yml`의 최상위 키와 연결됨). `config-version: 2`, `version: '0.1'`. 경로 키는 전부 **대시**(`model-paths`/`seed-paths`/`test-paths`), config는 **`+` 접두사**(`+materialized`, `+docs`)로 실제 작성됨 → 본문 문법 규칙 그대로 확인. 단 `require-dbt-version: [">=1.11.0", "<2.0.0"]`가 박혀 있어 **1차 환경(dbt-core 1.10.22)은 이 제약을 못 만족** → 매 명령에 `--no-version-check`를 붙여 우회함(5장 환경 주석과 동일 원인).
+
 ### 6.2 `profiles.yml` — 연결 자격증명
 
 - 타깃 DW **연결 정보(자격증명)** 저장. 민감정보를 프로젝트/버전관리 밖에 둔다.
@@ -334,9 +336,23 @@ my_project_profile:
 ```
 - target 전환: `dbt run --target prod`
 
+> 🔬 **실습 검증**: jaffle `profiles.yml` 실측 — 본문 Snowflake 예제와 달리 **자격증명이 사실상 0개**다. DuckDB는 로컬 파일 기반이라 `account`/`user`/`password`/`warehouse`가 전부 불필요하고, 필요한 건 **파일 경로 하나**뿐:
+> ```yaml
+> jaffle_shop:            # ← dbt_project.yml의 profile: 값과 일치해야 함
+>   target: dev
+>   outputs:
+>     dev:
+>       type: duckdb
+>       path: 'jaffle_shop.duckdb'   # 이 파일이 곧 DW
+>       threads: 24
+> ```
+> 위치도 권장값 `~/.dbt/`가 아니라 **프로젝트 루트**에 둠 → 탐색 순서(`--profiles-dir` → 프로젝트 루트 → `~/.dbt/`)상 **루트 파일이 먼저 채택**됨을 확인. **Profile(`jaffle_shop`) → Target(`dev`) → outputs** 3단 구조와 "profile 키 ↔ dbt_project.yml의 profile 매칭"도 그대로 성립.
+
 ### 6.3 표준 디렉토리
 
 `models/`, `seeds/`, `snapshots/`, `tests/`, `macros/`, `analyses/`, `docs/`, `dbt_packages/`(패키지 설치 경로) 등 — 각각 `dbt_project.yml`의 `*-paths` 키에 대응.
+
+> 🔬 **실습 검증**: jaffle에 **실제 존재하는 폴더는 `models/`·`seeds/`만**(+ 빌드 산출물 `target/`·`logs/`, 데모용 `etc/`·`images/`). 흥미로운 점은 `dbt_project.yml`이 `macro-paths: ["macros"]`·`analysis-paths: ["analysis"]`·`test-paths: ["tests"]`를 **선언하지만 해당 폴더는 물리적으로 없다**는 것 → **dbt는 선언된 선택적 경로가 비어 있어도 무시하고 진행**(빌드 PASS). `snapshots/`·`macros/`·`packages.yml`·`dbt_packages/`도 없음 → 이번 실습은 **스냅샷·커스텀 매크로·외부 패키지를 쓰지 않는 최소 구성**임을 방증. 즉 "표준 디렉토리 = 항상 다 있는 것"이 아니라 **쓰는 리소스만큼만 존재**한다.
 
 ### 6.4 Properties YAML (`schema.yml`)
 
@@ -394,6 +410,21 @@ dbt run --select "config.materialized:table"
 - **그래프 연산자**: `my_model+`(자신+하위), `+my_model`(상위+자신), `+my_model+`(상하위 전부), `@my_model`(가장 포괄), `*`(와일드카드).
 - **집합 연산자**: 쉼표 `,` = 교집합(AND), 공백 = 합집합(OR).
 - **선택 메서드**: `tag:`, `path:`, `config:`, `source:`, `source_status:`, `state:`(예: `state:modified+`, `--state` 필요), `result:`, `test_type:` 등.
+
+> 🔬 **실습 검증**: 1차에서 **실제로 실행해 본 명령**과 **미검증 명령**을 구분하면 —
+>
+> | 명령 | 1차 검증 | 관찰 결과 |
+> | --- | --- | --- |
+> | `dbt seed` | ✅ | `raw_*` 3종 적재(`dbt build`에 포함되어 실행) |
+> | `dbt build` | ✅ | 한 DAG로 통합 실행, **PASS=28**(0.93s) |
+> | `dbt compile` | ✅ | `target/compiled/...`에 순수 SQL 생성, `ref()` 치환 확인 |
+> | `dbt docs generate`/`serve` | ✅ | `catalog.json` + lineage DAG(→ 8장) |
+> | `dbt snapshot` | ❌ | 스냅샷 리소스 없음 → 미실행 |
+> | `dbt source freshness` | ❌ | source 정의 없음(seed 구조) → 적용 불가 |
+> | `dbt deps` | ❌ | `packages.yml` 없음 → 설치할 패키지 없음 |
+> | `--select` 그래프/집합 연산자 | ❌ | 전체 빌드만 수행, **노드 선택 문법은 1차 미검증** |
+>
+> 모든 명령에 `--no-version-check`를 동반(환경: dbt-core **1.10.22** + dbt-duckdb). ❌ 항목은 source/snapshot/패키지/노드선택 실습을 추가할 때(Olist 본편 등) 채울 예정.
 
 ---
 
