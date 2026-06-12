@@ -148,6 +148,44 @@ config:
 
 > 🔬 **실습 검증**: jaffle 데모는 `source()`를 **쓰지 않는다** — 원본을 seeds(CSV)로 적재하고 staging이 `{{ ref('raw_customers') }}`로 직접 참조한다. (`stg_customers.sql` 주석: *"Normally we would select from the table here, but we are using seeds to load our data in this project"*) 따라서 `source()`·freshness는 **1차 미검증** → Olist 본편/별도 Sources 실습에서 확인 예정.
 
+#### 5.2.1 `source()` vs `ref()` — "데이터가 어디서 왔는가"
+
+두 함수 모두 **의존성(DAG)** 을 만든다는 점은 같다. 차이는 **가리키는 대상이 dbt 안에서 만들어진 것인지, 밖에서 적재된 것인지**다.
+
+| 구분 | **`source()`** | **`ref()`** |
+| --- | --- | --- |
+| 가리키는 대상 | dbt **밖에서** EL 도구(Fivetran/Airbyte 등)가 적재한 **raw 테이블** | dbt가 **직접 만든** 모델 또는 seed |
+| 데이터 출처 | 운영 DB·외부 적재 파이프라인(이미 존재한다는 전제) | `seeds/*.csv`(`dbt seed`) 또는 상위 모델 |
+| YAML 정의 | **`sources:` 블록 필수**(`_sources.yml`) | 불필요(`.sql`/`.csv` 파일만 있으면 됨) |
+| freshness 검사 | `dbt source freshness`로 **원본 갱신 지연 추적 가능** | 불가(dbt가 만든 것이라 개념상 무의미) |
+| lineage 위치 | 그래프의 **최상류 source 노드**(보통 초록색) | source/seed **하류**의 모델 노드 |
+| 컴파일 결과(예) | `"raw"."jaffle_shop"."customers"` | `"jaffle_shop"."main"."raw_customers"` |
+
+**같은 `stg_customers`를 두 방식으로 쓰면:**
+
+```sql
+-- (A) 지금 jaffle 방식 — seed를 ref()로 참조
+select * from {{ ref('raw_customers') }}
+-- 컴파일 → select * from "jaffle_shop"."main"."raw_customers"
+
+-- (B) source() 방식 — 외부 raw 테이블을 참조 (별도 YAML 선언 필요)
+select * from {{ source('jaffle_shop', 'customers') }}
+-- 컴파일 → select * from "raw"."jaffle_shop"."customers"
+```
+
+(B)를 쓰려면 먼저 source를 선언해야 한다:
+```yaml
+# models/staging/_sources.yml
+version: 2
+sources:
+  - name: jaffle_shop
+    database: raw          # 외부에 이미 존재하는 raw DB/스키마
+    tables:
+      - name: customers
+```
+
+**왜 jaffle은 `source()` 대신 seed를 쓰나?** → `source()`는 *"누군가 이미 raw 테이블을 적재해 두었다"* 는 **외부 전제**가 필요하다. 학습용 레포는 그 전제를 만들 수 없으므로, CSV를 함께 넣고 `dbt seed`로 자급자족한다. 즉 **seed가 source의 대역(代役)** 이다. 실무 표준 흐름은 **`source()`(raw) → staging(`ref`) → marts(`ref`)** 이며, jaffle은 맨 앞 `source()`만 seed로 대체했을 뿐 나머지 구조는 동일하다.
+
 ### 5.3 Seeds (시드)
 
 - **정의**: dbt 프로젝트 내 **CSV 파일**을 `dbt seed`로 DW에 테이블로 적재. 버전 관리·리뷰가 가능해 **변경이 드문 정적 데이터**에 적합(국가코드 매핑, 코드 룩업 등).
