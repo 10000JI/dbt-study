@@ -1,0 +1,33 @@
+name: 'olist'
+config-version: 2
+version: '0.1'
+profile: 'olist'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+require-dbt-version: [">=1.9.0", "<2.0.0"]
+
+models:
+  olist:
+    staging:
+      +materialized: view
+      +docs: { node_color: "silver" }
+    intermediate:
+      +materialized: view
+      +docs: { node_color: "#9ecae1" }
+    marts:
+      +materialized: table
+      +docs: { node_color: "gold" }
+    snapshot_src:
+      +materialized: table
+
+seeds:
+  olist:
+    +docs: { node_color: "#cd7f32" }
