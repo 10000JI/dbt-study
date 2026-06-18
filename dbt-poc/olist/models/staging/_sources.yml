@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: olist
+    description: "Olist Brazilian E-Commerce raw CSVs (external, read-only)."
+    meta:
+      external_location: "read_csv_auto('data/olist_{name}_dataset.csv', header = true, all_varchar = false)"
+    tables:
+      - name: orders
+        description: "주문 헤더(상태·타임스탬프). PK: order_id"
+      - name: order_items
+        description: "주문 라인아이템. PK: order_id + order_item_id"
+      - name: order_payments
+        description: "주문 결제. PK: order_id + payment_sequential"
+      - name: products
+        description: "상품 마스터. PK: product_id"
+      - name: customers
+        description: "주문별 고객 키. PK: customer_id (customer_unique_id가 실인물)"

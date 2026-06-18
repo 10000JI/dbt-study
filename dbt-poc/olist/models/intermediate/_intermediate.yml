@@ -1,0 +1,9 @@
+version: 2
+models:
+  - name: int_order_items_enriched
+    description: "주문 라인아이템 + 상품 카테고리(영문) 결합. grain: order_id + order_item_number"
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: item_total
+        tests: [not_null]

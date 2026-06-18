@@ -1,0 +1,26 @@
+version: 2
+models:
+  - name: fct_orders
+    description: "주문 1행 팩트(상태·금액·결제)."
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+  - name: fct_daily_sales
+    columns:
+      - name: order_purchase_date
+        tests: [unique, not_null]
+  - name: dim_customers
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+  - name: dim_products
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
