@@ -14,6 +14,8 @@
 | 7 | marts dims | ✅ 완료 (dim_customers 99441, dim_products 32951) |
 | 8 | marts facts | ✅ 완료 (fct_orders 99441 n=k, fct_daily_sales 634일) |
 | 9 | marts 테스트 | ✅ 완료 (generic + singular 금액 비음수 PASS) |
-| 10 | 전체 build + SKIP 게이트 | ⬜ |
-| 11 | snapshot SCD2 | ⬜ |
-| 12 | docs/lineage + 노트 갱신 | ⬜ |
+| 10 | 전체 build + SKIP 게이트 | ✅ 완료 (PASS=40 / SKIP 재현: PASS=7 ERROR=1 SKIP=9) |
+| 11 | snapshot SCD2 | ✅ 완료 (200→201행, shipped→delivered 이력 관찰) |
+| 12 | docs/lineage + 노트 갱신 | ✅ 완료 (parent_map 전체 DAG, 실습로그 STEP4~9, 이론 미검증 5건 해소) |
+
+**Phase 1 전체 완료 (2026-06-18).** 다음: Phase 2(sellers/reviews/geolocation + freshness) 또는 DataFusion 트랙.

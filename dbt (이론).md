@@ -146,7 +146,8 @@ config:
   - `warn_after`(경고)/`error_after`(에러)/`freshness: null`(검사 제외).
   - 신선해진 소스의 하위만 빌드: `dbt build --select "source_status:fresher+"`
 
-> 🔬 **실습 검증**: jaffle 데모는 `source()`를 **쓰지 않는다** — 원본을 seeds(CSV)로 적재하고 staging이 `{{ ref('raw_customers') }}`로 직접 참조한다. (`stg_customers.sql` 주석: *"Normally we would select from the table here, but we are using seeds to load our data in this project"*) 따라서 `source()`·freshness는 **1차 미검증** → Olist 본편/별도 Sources 실습에서 확인 예정.
+> 🔬 **실습 검증**: jaffle 데모는 `source()`를 **쓰지 않는다** — 원본을 seeds(CSV)로 적재하고 staging이 `{{ ref('raw_customers') }}`로 직접 참조한다. (`stg_customers.sql` 주석: *"Normally we would select from the table here, but we are using seeds to load our data in this project"*) 따라서 `source()`·freshness는 1차(jaffle)에선 미검증.
+> → ✅ **Olist 본편 검증(2026-06-18)**: `source()`를 dbt-duckdb **external source**로 직접 실검증. `_sources.yml`에 `meta.external_location: read_csv_auto('data/olist_{name}_dataset.csv')` 선언 → `{name}`이 테이블명으로 치환되어 raw CSV를 `{{ source('olist','orders') }}`로 **seed 없이 직접 참조**. (freshness는 Olist에 적재시각 컬럼이 없어 개념 확인 수준 — 정적 데이터라 항상 stale.)
 
 #### 5.2.1 `source()` vs `ref()` — "데이터가 어디서 왔는가"
 
@@ -225,7 +226,8 @@ snapshots:
 - 명령: `dbt snapshot`. `unique_key`는 반드시 유일해야 함(uniqueness 테스트 권장).
 - *(버전 주의)* 레거시는 `.sql` 파일 내 `{% snapshot %} ... {% endsnapshot %}` 블록 방식이었으나, 최신 docs는 위 YAML 방식으로 대체됨.
 
-> 🔬 **실습 검증**: **1차 미검증**(jaffle엔 snapshot 없음). `dbt_valid_from/to` 변화 관찰은 1차 완료 기준 항목 → **Olist 본편**에서 원본을 변경하며 SCD2 1회 관찰 예정.
+> 🔬 **실습 검증**: jaffle엔 snapshot 없어 1차 미검증.
+> → ✅ **Olist 본편 검증(2026-06-18)**: `snap_orders_src`(shipped 200건 mutable table)에 `strategy: check, check_cols: [order_status]` 스냅샷. 1차 snapshot 후 한 주문 status를 `UPDATE shipped→delivered` → 2차 snapshot에서 **그 주문이 2행**으로: 옛 행(shipped, `dbt_valid_to` 채워짐) + 새 행(delivered, `dbt_valid_to` NULL=현재). 총 200→201행. `dbt_valid_from/to` 이력 추적 실확인. (정적 CSV는 mutable 테이블을 만들어 직접 변경해야 SCD2가 관찰됨.)
 
 ### 5.5 Data Tests (데이터 테스트)
 
@@ -397,7 +399,8 @@ models:
   > 예: `model_b`가 `model_a`에 의존하고, `model_a`의 `unique` 테스트가 실패하면 → `model_b`는 SKIP.
 - 즉 각 노드를 빌드하면서 그 노드의 테스트가 **게이트** 역할을 하여, 통과해야 하위로 진행. 단일 manifest/run_results 산출.
 
-> 🔬 **실습 검증**: jaffle `dbt build` → `3 seeds, 3 view models, 2 table models, 20 data tests`를 한 DAG로 실행, **PASS=28 WARN=0 ERROR=0 SKIP=0**(0.93s). 관찰된 실행 순서: `seed 적재 → stg_*(view) → stg 테스트 → customers/orders(table) → 마트 테스트`. 단 이번엔 전부 PASS라 **상위 실패→하위 SKIP 게이트는 미재현** → 품질·이력 주차에서 일부러 테스트를 깨서 확인 예정.
+> 🔬 **실습 검증**: jaffle `dbt build` → `3 seeds, 3 view models, 2 table models, 20 data tests`를 한 DAG로 실행, **PASS=28 WARN=0 ERROR=0 SKIP=0**(0.93s). 관찰된 실행 순서: `seed 적재 → stg_*(view) → stg 테스트 → customers/orders(table) → 마트 테스트`. 단 jaffle은 전부 PASS라 상위 실패→하위 SKIP 게이트는 1차 미재현.
+> → ✅ **Olist 본편 재현(2026-06-18)**: `_staging.yml`에서 order_status accepted_values의 `'delivered'`를 임시 제거 → `dbt build -s stg_orders+`에서 **stg_orders 테스트 FAIL**(`Got 1 result`) → 하위 `fct_orders`·`fct_daily_sales`(+그 테스트) **SKIP** (`PASS=7 ERROR=1 SKIP=9`). 트리거는 모델 빌드 실패가 아니라 **상위 노드의 테스트 실패**임을 확인. (단 `int_order_items_enriched`는 stg_orders의 하위가 아니라 SKIP 대상 아님 — DAG 의존을 정확히 봐야 SKIP 범위를 안다.)
 
 ### 7.2 노드 선택 문법 (`--select`, 그래프 연산자)
 
@@ -424,7 +427,8 @@ dbt run --select "config.materialized:table"
 > | `dbt deps` | ❌ | `packages.yml` 없음 → 설치할 패키지 없음 |
 > | `--select` 그래프/집합 연산자 | ❌ | 전체 빌드만 수행, **노드 선택 문법은 1차 미검증** |
 >
-> 모든 명령에 `--no-version-check`를 동반(환경: dbt-core **1.10.22** + dbt-duckdb). ❌ 항목은 source/snapshot/패키지/노드선택 실습을 추가할 때(Olist 본편 등) 채울 예정.
+> 모든 명령에 `--no-version-check`를 동반(환경: dbt-core **1.10.22** + dbt-duckdb).
+> → ✅ **Olist 본편 추가 검증(2026-06-18, dbt 1.11 신환경)**: `dbt snapshot`(SCD2), `dbt show --inline`(임의 쿼리), source() 적재까지 실행. 남은 ❌: `dbt source freshness`(Olist에 적재시각 없음), `dbt deps`(패키지 미사용), `--select` 그래프 연산자는 SKIP 게이트 재현 때 `stg_orders+`로 **일부 사용**(하위 선택 확인). 완전한 노드 선택 문법은 추후.
 
 ---
 
@@ -462,7 +466,8 @@ dbt Labs 공식 Best Practices 가이드는 프로젝트를 **3개 변환 레이
 - 추가: 반복 로직은 **macros**로 DRY, 핵심 컬럼에 테스트·문서 부여.
 - *(주의)* 네이밍 접두사(`stg_/int_/fct_/dim_`)는 가이드·jaffle_shop 예제에서 널리 쓰이는 컨벤션.
 
-> 🔬 **실습 검증**: jaffle는 **staging + marts 2계층만** 존재(intermediate 없음): `stg_*`(view) → `customers`/`orders`(table). 3계층(staging→intermediate→marts)과 `int_`/`fct_`/`dim_` 네이밍, generic+singular 테스트, snapshots(SCD2)는 **Olist 본편**에서 직접 모델을 작성하며 검증 예정.
+> 🔬 **실습 검증**: jaffle는 **staging + marts 2계층만** 존재(intermediate 없음): `stg_*`(view) → `customers`/`orders`(table).
+> → ✅ **Olist 본편 검증(2026-06-18)**: 3계층을 직접 작성 — **staging(view) 5종 → `int_order_items_enriched`(intermediate, view) → marts(table) 4종**(`dim_customers`/`dim_products`/`fct_orders`/`fct_daily_sales`). `int_`/`fct_`/`dim_` 네이밍, **generic(unique·not_null·relationships·accepted_values) + singular(`assert_fct_orders_amounts_non_negative`) 테스트** 모두 작성·PASS(`dbt build PASS=40`). intermediate가 마트 조인의 중간 빌딩블록으로 동작함을 확인(int를 fct_orders가 집계 참조).
 
 ### 9.1 "표준"의 정체 — 컨벤션 vs 엔진 규칙 (강제 아님)
 
@@ -495,7 +500,8 @@ EL 도구(Fivetran 등)가 raw 적재   ← 내 일 아님
   - `generate_base_model` → source 컬럼을 읽어 `stg_*` SQL 초안 출력 → 복사 후 정리만 손봄
 - *(주의)* codegen은 **편의 도구**일 뿐 표준은 아니다. **진짜 표준은 "raw→stg 1:1 + 레이어 구조"**이며, 자동 생성 여부는 선택.
 
-> 🔬 **실습 검증**: **1차 미검증**(jaffle은 stg가 이미 제공됨 → "만들어진 걸 분석"). source 선언·codegen 설치·신규 stg 직접 작성은 별도 Sources/실무 재현 실습에서 확인 예정.
+> 🔬 **실습 검증**: jaffle은 stg가 이미 제공됨 → "만들어진 걸 분석"(1차).
+> → ✅ **Olist 본편 검증(2026-06-18)**: source 선언(`_sources.yml`)부터 stg 5종을 **직접 작성** — raw CSV 1개당 stg 모델 1개(1:1)로 컬럼명 표준화·타입 캐스팅. 실무 흐름(source→staging(ref)→marts(ref))을 손으로 재현. (codegen 자동 생성은 미사용 — 직접 작성으로 체득.)
 
 ---
 
