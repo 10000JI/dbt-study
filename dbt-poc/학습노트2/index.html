@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학습 노트 — dbt 2차 (Olist 본편)</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222b35; --ink:#e7edf3; --muted:#9aa7b4;
+    --line:#2e3a46; --accent:#ff694a; --accent2:#3aa0a0; --gold:#d9a441; --silver:#b9c2cc; --bronze:#cd7f32;
+    --green:#46b66b; --code:#0b0f14;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.7;font-size:16px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px 120px}
+  header{padding:54px 0 30px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;color:var(--accent);
+    letter-spacing:.5px;font-size:14px;text-transform:uppercase}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  h1{font-size:34px;margin:14px 0 6px;line-height:1.25}
+  .sub{color:var(--muted);font-size:15px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:5px 13px;font-size:13px;color:var(--muted)}
+  .chip b{color:var(--ink);font-weight:600}
+  nav.toc{position:sticky;top:0;background:rgba(15,20,25,.92);backdrop-filter:blur(8px);
+    z-index:5;border-bottom:1px solid var(--line);margin:0 -22px 36px;padding:12px 22px;display:flex;
+    gap:8px;flex-wrap:wrap}
+  nav.toc a{color:var(--muted);text-decoration:none;font-size:13.5px;padding:4px 10px;border-radius:8px}
+  nav.toc a:hover{background:var(--panel2);color:var(--ink)}
+  section{margin:46px 0;scroll-margin-top:64px}
+  h2{font-size:24px;margin:0 0 6px;display:flex;align-items:center;gap:11px}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;
+    background:var(--accent);color:#fff;border-radius:9px;font-size:15px;font-weight:700}
+  h3{font-size:18px;margin:30px 0 8px;color:var(--ink)}
+  p{margin:10px 0;color:#d4dde6}
+  .lead{color:var(--muted);font-size:15px;margin-top:2px}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;
+    background:#11181f;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#ffd9cf}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:11px;padding:16px 18px;
+    overflow:auto;margin:14px 0;font-size:13.5px;line-height:1.6}
+  pre code{background:none;border:none;padding:0;color:#cfe0ee}
+  .cmt{color:#5d6b78}
+  .kw{color:#ff8a6b}.str{color:#8fd694}.fn{color:#76b9e8}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:var(--panel)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:16px 0}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+  .layer{border-radius:13px;padding:16px;border:1px solid var(--line);background:var(--panel)}
+  .layer .tag{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .layer h4{margin:8px 0 4px;font-size:16px}
+  .layer p{font-size:13px;color:var(--muted);margin:2px 0}
+  .l-bronze{border-top:3px solid var(--bronze)} .l-bronze .tag{color:var(--bronze)}
+  .l-silver{border-top:3px solid var(--silver)} .l-silver .tag{color:var(--silver)}
+  .l-gold{border-top:3px solid var(--gold)} .l-gold .tag{color:var(--gold)}
+  .l-green{border-top:3px solid var(--green)} .l-green .tag{color:var(--green)}
+  figure{margin:20px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:12px;overflow:hidden}
+  figure img{width:100%;border-radius:8px;display:block;border:1px solid var(--line)}
+  figcaption{color:var(--muted);font-size:13px;margin-top:10px;padding:0 4px}
+  .callout{border-left:3px solid var(--accent2);background:rgba(58,160,160,.08);
+    border-radius:0 10px 10px 0;padding:14px 18px;margin:18px 0}
+  .callout.warn{border-color:var(--gold);background:rgba(217,164,65,.08)}
+  .callout.good{border-color:var(--green);background:rgba(70,182,107,.08)}
+  .callout b{color:var(--ink)}
+  .flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:18px 0}
+  .flow .step{flex:1;min-width:130px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px;text-align:center}
+  .flow .step .ic{font-size:22px}
+  .flow .step h5{margin:8px 0 3px;font-size:14px}
+  .flow .step p{font-size:12px;color:var(--muted);margin:0}
+  .arrow{display:flex;align-items:center;color:var(--accent);font-size:20px;font-weight:700}
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+  .kpi .b{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .kpi .b .v{font-size:26px;font-weight:700;color:var(--accent)}
+  .kpi .b .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .pass{color:var(--green);font-weight:600}
+  .warn-t{color:var(--gold);font-weight:600}
+  .fail{color:var(--accent);font-weight:600}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  a.link{color:var(--accent2)}
+  @media(max-width:720px){.grid,.kpi{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand"><span class="dot"></span> dbt 학습 노트 · 2차</div>
+  <h1>Olist 전자상거래 데이터로 만든 dbt 데이터 파이프라인</h1>
+  <p class="sub">— dbt가 처음인 사람도 "데이터가 어떻게 흐르는지" 끝까지 따라올 수 있게 정리한 노트입니다.</p>
+  <div class="meta">
+    <span class="chip"><b>데이터</b> Olist 브라질 이커머스 (실데이터)</span>
+    <span class="chip"><b>주문</b> 99,441건</span>
+    <span class="chip"><b>엔진</b> dbt-core 1.11 + DuckDB</span>
+    <span class="chip"><b>결과</b> dbt build PASS=45</span>
+    <span class="chip"><b>일자</b> 2026-06-18</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#what">① dbt가 뭐야?</a>
+  <a href="#why">② 왜 쓰는데?</a>
+  <a href="#flow">③ 전체 플로우</a>
+  <a href="#layers">④ 4개 레이어</a>
+  <a href="#lineage">⑤ 계보(그림)</a>
+  <a href="#test">⑥ 테스트</a>
+  <a href="#snapshot">⑦ 이력추적</a>
+  <a href="#result">⑧ 결과</a>
+  <a href="#words">용어</a>
+</nav>
+
+<!-- 1 -->
+<section id="what">
+  <h2><span class="n">1</span> dbt가 도대체 뭐야?</h2>
+  <p class="lead">한 문장: <b>"창고(데이터베이스) 안에 쌓인 raw 데이터를, SQL로 깔끔하게 가공해 쓸 수 있게 만들어주는 도구"</b></p>
+
+  <div class="card">
+    <p>비유를 들어볼게요. 🏭</p>
+    <p>마트에 <b>원재료(raw 데이터)</b>가 잔뜩 들어왔어요 — 주문 기록, 고객 명단, 상품 목록, 결제 내역이 따로따로 흩어진 CSV 파일들입니다. 이대로는 "어제 매출이 얼마야?" 같은 질문에 답할 수 없어요. 가공이 필요합니다.</p>
+    <p><b>dbt</b>는 이 가공 과정을 관리하는 <b>주방 매니저</b>예요. 요리(연산) 자체는 안 하지만 — 그건 데이터베이스(DuckDB·BigQuery 등)가 합니다 — "어떤 재료로 → 무슨 순서로 → 어떤 요리를 만들지" 레시피를 관리하고, 맛 검사(테스트)하고, 메뉴판(문서)을 자동으로 만들어줍니다.</p>
+  </div>
+
+  <div class="callout">
+    <b>핵심:</b> 사용자는 <code>SELECT</code> 문(원하는 결과를 묘사하는 SQL)만 작성합니다. <code>CREATE TABLE</code>, 실행 순서, 의존성 관리 같은 귀찮은 건 전부 dbt가 알아서 해줍니다. → 이 방식을 <b>"분석 엔지니어링"</b>이라고 불러요.
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="why">
+  <h2><span class="n">2</span> 그냥 데이터베이스에 SQL 치면 되잖아? 왜 dbt?</h2>
+  <p class="lead">맞아요, SQL은 데이터베이스에 직접 쳐도 돌아갑니다. dbt가 주는 건 <b>"속도"가 아니라 "신뢰와 관리"</b>예요.</p>
+
+  <table>
+    <tr><th>상황</th><th>데이터베이스에 직접 SQL</th><th>dbt로 관리</th></tr>
+    <tr><td>코드 보관</td><td>여기저기 흩어짐, "그때 그 쿼리 뭐였지?"</td><td><span class="pass">.sql 파일 → Git 버전관리</span></td></tr>
+    <tr><td>실행 순서</td><td>사람이 "A 먼저, B 나중" 외워야 함</td><td><span class="pass">ref()로 순서 자동 결정</span></td></tr>
+    <tr><td>데이터 검증</td><td>매번 눈으로 확인</td><td><span class="pass">테스트로 자동 단언</span></td></tr>
+    <tr><td>문서/계보</td><td>없음</td><td><span class="pass">자동 생성 (이 노트의 그림들!)</span></td></tr>
+  </table>
+
+  <div class="callout">
+    한 줄 기준: <b>"한 번 보고 버릴 쿼리는 데이터베이스에 직접, 계속 유지·반복·공유할 변환 로직은 dbt"</b>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="flow">
+  <h2><span class="n">3</span> 우리가 만든 것 — 전체 플로우</h2>
+  <p class="lead">흩어진 CSV 6개가 → 정리되고 → 합쳐져서 → "매출 리포트"가 되기까지의 여정입니다.</p>
+
+  <div class="flow">
+    <div class="step"><div class="ic">📄</div><h5>raw CSV</h5><p>주문·고객·상품·결제 흩어진 원본</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="ic">🧹</div><h5>staging</h5><p>컬럼명·타입 정리 (1:1 청소)</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="ic">🔗</div><h5>intermediate</h5><p>주문+상품 합치기</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="ic">📊</div><h5>marts</h5><p>매출 집계 리포트</p></div>
+  </div>
+
+  <p>각 단계는 <b>앞 단계의 결과를 입력으로</b> 받습니다. dbt에서는 이 "앞 단계 가리키기"를 <code>{{ ref('모델이름') }}</code> 로 표현하는데, 이렇게만 쓰면 dbt가 알아서 <b>"아, 이건 저것보다 먼저 만들어야겠네"</b> 하고 순서를 정합니다.</p>
+
+  <pre><code><span class="cmt">-- 예: 매출 마트가 "정리된 주문"을 가져다 쓴다</span>
+<span class="kw">select</span> * <span class="kw">from</span> {{ <span class="fn">ref</span>(<span class="str">'stg_orders'</span>) }}   <span class="cmt">← "정리된 주문 모델을 먼저 만들고, 그 결과를 달라"</span></code></pre>
+
+  <div class="callout good">
+    <b>왜 4단계로 나눌까?</b> 한 번에 거대한 SQL 하나로 만들 수도 있지만, 단계를 나누면 ① 각 단계를 따로 테스트·재사용할 수 있고 ② 문제가 생겼을 때 어디가 잘못됐는지 바로 찾을 수 있어요. (레고 블록처럼 조립)
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="layers">
+  <h2><span class="n">4</span> 4개 레이어 자세히 보기</h2>
+  <p class="lead">색깔은 뒤 그림(계보)의 노드 색과 같습니다 — 한눈에 "어느 단계 것"인지 구분하려고요.</p>
+
+  <div class="grid">
+    <div class="layer l-green">
+      <div class="tag">● Source / Seed</div>
+      <h4>raw 원본</h4>
+      <p>Olist CSV 6개. dbt가 만든 게 아니라 <b>밖에서 들어온</b> 데이터. <code>source()</code>로 가리킴.</p>
+      <p style="color:var(--green)">orders·order_items·customers·products·payments + 카테고리 번역</p>
+    </div>
+    <div class="layer l-silver">
+      <div class="tag">● Staging (view)</div>
+      <h4>청소 단계</h4>
+      <p>raw 1개당 staging 1개(1:1). 컬럼명 통일, 타입 변환(문자→날짜/숫자)만. <b>합치지 않음.</b></p>
+      <p style="color:var(--silver)">stg_orders · stg_customers · stg_products · stg_order_items · stg_payments</p>
+    </div>
+    <div class="layer l-silver">
+      <div class="tag">● Intermediate (view)</div>
+      <h4>조립 단계</h4>
+      <p>여기서 처음으로 <b>여러 개를 합침</b>. 주문 아이템 + 상품 카테고리(영문)를 조인.</p>
+      <p style="color:#9ecae1">int_order_items_enriched</p>
+    </div>
+    <div class="layer l-gold">
+      <div class="tag">● Marts (table)</div>
+      <h4>완성 리포트</h4>
+      <p>실제로 사람이 보는 <b>최종 결과</b>. 비즈니스 질문에 답하는 표.</p>
+      <p style="color:var(--gold)">fct_orders · fct_daily_sales · dim_customers · dim_products</p>
+    </div>
+  </div>
+
+  <h3>fct? dim? 이름 규칙</h3>
+  <p><b>fct_</b>(fact, 사실)는 <b>"사건/숫자"</b>를 담아요 — 주문이 일어났고, 금액이 얼마였다. <b>dim_</b>(dimension, 차원)은 <b>"설명"</b>을 담아요 — 이 고객은 누구고, 이 상품은 뭔지. 매출 분석은 보통 "fact(숫자)를 dim(설명)으로 쪼개 보는" 식이에요. (예: <i>상품 카테고리(dim)별 매출(fact)</i>)</p>
+
+  <div class="callout warn">
+    <b>view vs table?</b> staging·intermediate는 <span class="pill">view</span> — 매번 새로 계산하는 "바로가기". marts는 <span class="pill">table</span> — 결과를 실제로 저장해 빠르게 조회. <b>똑같은 SELECT라도 설정에 따라 만들어지는 물건이 달라집니다.</b> 이 설정은 폴더별로 <code>dbt_project.yml</code>에 한 번만 적어두면 됩니다.
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="lineage">
+  <h2><span class="n">5</span> 계보(Lineage) — dbt가 자동으로 그려준 지도</h2>
+  <p class="lead">dbt의 가장 멋진 기능: <code>ref()</code>로 연결만 해두면, 데이터가 어디서 와서 어디로 가는지 <b>지도를 자동으로 그려줍니다.</b> (<code>dbt docs</code> 명령 한 줄)</p>
+
+  <figure>
+    <img src="img/01_lineage_full.png" alt="Olist 전체 lineage 그래프">
+    <figcaption>
+      <b>전체 계보도.</b> 왼쪽 <span style="color:var(--green)">초록(raw 원본)</span> → <span style="color:var(--silver)">회색(staging 청소)</span> → 가운데 <span style="color:#9ecae1">int(조립)</span> → <span style="color:var(--gold)">노랑/금색(marts 완성)</span> 으로 왼쪽에서 오른쪽으로 흐릅니다. <span style="color:var(--accent2)">청록색</span>은 데이터 검증 테스트들. 선을 따라가면 "이 숫자가 어떤 원본에서 왔는지" 끝까지 추적할 수 있어요.
+    </figcaption>
+  </figure>
+
+  <figure>
+    <img src="img/02_fct_orders_lineage.png" alt="fct_orders 모델 중심 계보">
+    <figcaption>
+      <b>한 모델의 족보.</b> 최종 매출 모델 <code>fct_orders</code>(보라색) 하나만 콕 집어 본 그림. 이 모델은 5개 raw에서 출발해 staging·intermediate를 거쳐 만들어지고(왼쪽), 다시 일별 매출(fct_daily_sales)과 테스트로 이어집니다(오른쪽). <b>"이 표가 틀렸다면 어디를 의심해야 하나"</b>를 즉시 알 수 있어요.
+    </figcaption>
+  </figure>
+
+  <figure>
+    <img src="img/03_fct_orders_detail.png" alt="fct_orders 모델 상세 — 컬럼/타입/테스트">
+    <figcaption>
+      <b>모델 상세 문서.</b> dbt가 자동 생성한 페이지 — 컬럼 목록과 타입(order_id=VARCHAR, payment_value=DOUBLE…), 설명("주문 1행 팩트"), 어떤 테스트가 걸렸는지(UN=unique, NF=not_null)까지. <b>아무도 따로 안 적었는데</b> 코드에서 자동으로 뽑아낸 메뉴판입니다.
+    </figcaption>
+  </figure>
+
+  <div class="callout good">
+    바로 이게 <b>"dbt를 쓰면 좋은 이유"</b>의 결정판이에요. 데이터베이스에 SQL만 쳤다면 이런 지도·문서는 존재하지 않습니다. 새 팀원이 와도 이 그림 한 장이면 전체 구조를 파악하죠.
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="test">
+  <h2><span class="n">6</span> 데이터 테스트 — "이 데이터 믿어도 돼?"</h2>
+  <p class="lead">코드에 버그가 있듯 데이터에도 문제가 생깁니다. dbt는 <b>데이터에 대한 규칙</b>을 걸고 매번 자동 검사해요.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>일반(generic) 테스트</h4>
+      <p>YAML에 한 줄로 거는 재사용 규칙 4종:</p>
+      <ul style="color:#d4dde6;font-size:14px">
+        <li><code>unique</code> — 주문 ID 중복 없나?</li>
+        <li><code>not_null</code> — 빈 값 없나?</li>
+        <li><code>relationships</code> — 주문의 고객이 고객표에 실제로 있나? (고아 데이터 탐지)</li>
+        <li><code>accepted_values</code> — 주문 상태가 정해진 값(delivered 등) 안에 있나?</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>단일(singular) 테스트</h4>
+      <p>내가 직접 SQL로 짜는 맞춤 규칙. 예: <i>"금액이 음수인 주문이 있으면 실패"</i>, <i>"배송완료인데 결제기록이 없는 주문 찾기"</i>.</p>
+      <p class="lead">실제로 이 검사가 Olist에서 <b>결제 누락 주문 1건</b>을 잡아냈어요. (아래 결과 참고)</p>
+    </div>
+  </div>
+
+  <h3>🔬 직접 확인한 것: "도미노 차단(SKIP)"</h3>
+  <p>dbt는 <code>build</code>할 때 <b>상위 데이터가 검사에 실패하면 그걸 쓰는 하위 모델은 아예 만들지 않습니다(SKIP).</b> 오염된 데이터가 아래로 퍼지는 걸 막는 안전장치예요. 일부러 테스트를 깨뜨려 재현해봤습니다:</p>
+  <pre><code><span class="cmt"># 주문 상태 테스트를 일부러 실패하게 만들고 build</span>
+FAIL  accepted_values_stg_orders_order_status   <span class="cmt">← 상위 실패</span>
+SKIP  fct_orders            <span class="cmt">← 그걸 쓰는 하위는 건너뜀</span>
+SKIP  fct_daily_sales       <span class="cmt">← 연쇄로 건너뜀</span>
+Done. PASS=7 <span class="fail">ERROR=1</span> <span class="warn-t">SKIP=9</span></code></pre>
+</section>
+
+<!-- 7 -->
+<section id="snapshot">
+  <h2><span class="n">7</span> 스냅샷 — "예전엔 어떤 값이었지?" (이력 추적)</h2>
+  <p class="lead">주문 상태는 시간이 지나며 바뀝니다(shipped → delivered). 보통은 덮어써져서 과거가 사라지죠. <b>snapshot</b>은 바뀔 때마다 과거를 보존합니다. (SCD2 기법)</p>
+
+  <p>실험: 한 주문의 상태를 <code>shipped → delivered</code>로 바꾸고 다시 snapshot을 떠봤어요. 그 주문이 <b>2줄</b>로 늘어납니다:</p>
+  <table>
+    <tr><th>상태</th><th>유효 시작 (valid_from)</th><th>유효 끝 (valid_to)</th><th>의미</th></tr>
+    <tr><td>shipped</td><td>09:21</td><td><b>09:22 (닫힘)</b></td><td>과거 기록</td></tr>
+    <tr><td>delivered</td><td>09:22</td><td><b>NULL (열림)</b></td><td>현재 값</td></tr>
+  </table>
+  <p><code>valid_to</code>가 비어있으면(NULL) "지금 유효한 값", 채워져 있으면 "과거 값"이에요. 이렇게 하면 <b>"3월 시점엔 이 주문이 무슨 상태였지?"</b>도 답할 수 있습니다.</p>
+</section>
+
+<!-- 8 -->
+<section id="result">
+  <h2><span class="n">8</span> 결과 — 실제로 나온 매출 리포트</h2>
+
+  <div class="kpi">
+    <div class="b"><div class="v">45</div><div class="l">테스트 PASS</div></div>
+    <div class="b"><div class="v">99,441</div><div class="l">주문 (fct_orders)</div></div>
+    <div class="b"><div class="v">634</div><div class="l">매출 발생일</div></div>
+    <div class="b"><div class="v">0</div><div class="l">에러</div></div>
+  </div>
+
+  <p>최종 빌드 결과: <code>dbt build → <span class="pass">PASS=45</span> <span class="warn-t">WARN=1</span> ERROR=0</code> — 모든 모델이 만들어지고 검증을 통과했습니다. (WARN 1건은 위에서 잡은 결제 누락 주문 — 빌드를 막진 않되 알려주도록 설정)</p>
+
+  <h3>일별 매출 TOP 5 (fct_daily_sales)</h3>
+  <table>
+    <tr><th>날짜</th><th>주문 수</th><th>고객 수</th><th>결제액(R$)</th></tr>
+    <tr><td>2017-11-24 🔥</td><td>1,176</td><td>1,176</td><td>179,200</td></tr>
+    <tr><td>2017-11-25</td><td>499</td><td>499</td><td>71,897</td></tr>
+    <tr><td>2018-08-06</td><td>372</td><td>372</td><td>65,860</td></tr>
+    <tr><td>2018-05-16</td><td>357</td><td>357</td><td>64,742</td></tr>
+    <tr><td>2018-05-07</td><td>372</td><td>372</td><td>62,568</td></tr>
+  </table>
+  <p class="lead">🔥 2017년 11월 24일이 압도적 1위 — <b>브라질의 블랙프라이데이</b>입니다. 흩어진 CSV가 "이날 매출이 터졌다"는 인사이트로 바뀐 순간이에요.</p>
+
+  <h3>상품 카테고리 번역도 자동 (dim_products)</h3>
+  <p>포르투갈어 카테고리를 영문으로 붙인 룩업 테이블(seed)을 조인했어요: <code>perfumaria → perfumery</code>, <code>esporte_lazer → sports_leisure</code>, <code>bebes → baby</code> …</p>
+</section>
+
+<!-- 용어 -->
+<section id="words">
+  <h2><span class="n">＊</span> 한 장 용어 사전</h2>
+  <table>
+    <tr><th>용어</th><th>쉬운 설명</th></tr>
+    <tr><td><code>model</code></td><td>SELECT 문 하나 = 가공 결과 하나 (.sql 파일)</td></tr>
+    <tr><td><code>source()</code></td><td>"밖에서 들어온 raw 데이터"를 가리키는 함수</td></tr>
+    <tr><td><code>ref()</code></td><td>"dbt가 만든 다른 모델"을 가리키는 함수 → 실행 순서 자동 결정</td></tr>
+    <tr><td><code>seed</code></td><td>작은 CSV를 dbt가 직접 테이블로 적재 (카테고리 번역 같은 룩업)</td></tr>
+    <tr><td><code>materialization</code></td><td>모델을 view로 만들지 table로 만들지 결정하는 설정</td></tr>
+    <tr><td><code>lineage</code></td><td>데이터 흐름 지도 (이 노트의 그림들)</td></tr>
+    <tr><td><code>snapshot</code></td><td>값이 바뀔 때마다 과거를 보존하는 이력 추적</td></tr>
+    <tr><td><code>dbt build</code></td><td>모델 만들기 + 테스트를 의존 순서대로 한 번에 실행</td></tr>
+  </table>
+</section>
+
+<footer>
+  <p><b>학습 노트 2차 (Olist 본편)</b> · 1차(jaffle_shop 워밍업) 이후 실데이터로 staging→intermediate→marts 전 과정을 직접 구축·검증한 기록입니다.</p>
+  <p>환경: dbt-core 1.11.11 · dbt-duckdb · DuckDB · Python 3.12 / 데이터: Olist Brazilian E-Commerce (CC BY-NC, 학습 전용) · 2026-06</p>
+  <p>코드·문서: <span style="color:var(--accent2)">github.com/10000JI/dbt-study</span> · 캡처: dbt docs (자동 생성)</p>
+</footer>
+
+</div>
+</body>
+</html>
