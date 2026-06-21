@@ -129,16 +129,18 @@
 </header>
 
 <nav class="toc">
+  <a href="#biz">⊕ 비즈니스 배경</a>
   <a href="#why">① 왜 dbt인가</a>
   <a href="#concept">② 핵심 철학</a>
   <a href="#arch">③ 아키텍처</a>
   <a href="#structure">④ 프로젝트 구조</a>
   <a href="#pipeline">⑤ 전체 플로우</a>
-  <a href="#layers">⑥ 레이어 상세</a>
-  <a href="#lineage">⑦ 계보(그림)</a>
-  <a href="#test">⑧ 테스트</a>
-  <a href="#snapshot">⑨ 스냅샷</a>
-  <a href="#result">⑩ 결과</a>
+  <a href="#trace">⑥ 파일 추적표</a>
+  <a href="#layers">⑦ 레이어 상세</a>
+  <a href="#lineage">⑧ 계보(그림)</a>
+  <a href="#test">⑨ 테스트</a>
+  <a href="#snapshot">⑩ 스냅샷</a>
+  <a href="#result">⑪ 결과</a>
   <a href="#words">용어</a>
 </nav>
 
@@ -155,6 +157,55 @@
       <span class="k">⑤ 문서</span><span><code>dbt docs</code>로 <b>계보 지도와 문서가 자동 생성</b> (이 노트의 그림들)</span>
     </div>
   </div>
+</section>
+
+<!-- ===================== 비즈니스 배경 ===================== -->
+<section id="biz">
+  <h2><span class="n">⊕</span> 비즈니스 배경 — 어떤 데이터로, 무슨 질문에 답하나</h2>
+  <p class="lead">기술 이전에 "무엇을 위한 데이터인가"부터. dbt는 결국 <b>비즈니스 질문에 답하는 표</b>를 만드는 도구예요.</p>
+
+  <div class="card">
+    <h4 style="margin-top:0">🛒 Olist는 어떤 회사?</h4>
+    <p style="font-size:14.5px"><b>Olist</b>는 브라질의 <b>전자상거래 마켓플레이스 통합 플랫폼</b>입니다. 소상공인(셀러)이 여러 쇼핑몰에 한 번에 입점하도록 연결해주는 중개 사업자예요. 이 공개 데이터셋은 <b>2016년 9월 ~ 2018년 10월</b> 실제 주문 기록으로, 주문·상품·결제·고객·셀러가 여러 CSV로 정규화되어 있습니다. (라이선스: CC BY-NC, 학습 전용)</p>
+  </div>
+
+  <h3>이 파이프라인이 답하려는 비즈니스 질문</h3>
+  <div class="grid2">
+    <div class="layer l-gold" style="margin:0">
+      <div class="tag">● 매출 (fct)</div>
+      <p style="color:#d4dde6;font-size:13.5px">"언제 매출이 터졌나? 일별 추세는? 평균 주문금액은?"<br>→ <code>fct_orders</code>, <code>fct_daily_sales</code></p>
+    </div>
+    <div class="layer l-gold" style="margin:0">
+      <div class="tag">● 고객·상품 (dim)</div>
+      <p style="color:#d4dde6;font-size:13.5px">"어느 지역 고객이 많나? 어떤 카테고리가 잘 팔리나?"<br>→ <code>dim_customers</code>, <code>dim_products</code></p>
+    </div>
+  </div>
+
+  <h3>실제로 나온 답 (이 파이프라인의 산출 지표)</h3>
+  <div class="kpi">
+    <div class="b"><div class="v">R$16.0M</div><div class="l">총 결제액</div></div>
+    <div class="b"><div class="v">96,096</div><div class="l">고유 고객</div></div>
+    <div class="b"><div class="v">R$161</div><div class="l">평균 주문금액</div></div>
+    <div class="b"><div class="v">97%</div><div class="l">배송완료율</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0">카테고리 매출 TOP 5</h4>
+      <table style="margin:4px 0">
+        <tr><td>health_beauty (헬스·뷰티)</td><td style="text-align:right;color:var(--gold)">R$1.44M</td></tr>
+        <tr><td>watches_gifts (시계·선물)</td><td style="text-align:right">R$1.31M</td></tr>
+        <tr><td>bed_bath_table (침구·욕실)</td><td style="text-align:right">R$1.24M</td></tr>
+        <tr><td>sports_leisure (스포츠·레저)</td><td style="text-align:right">R$1.16M</td></tr>
+        <tr><td>computers_accessories</td><td style="text-align:right">R$1.06M</td></tr>
+      </table>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0">결제수단 · 지역 집중</h4>
+      <p style="font-size:13.5px;margin:4px 0"><b>결제:</b> 신용카드 <b>74%</b> · boleto(브라질식 지로) 19% · voucher 6% · 체크카드 1%</p>
+      <p style="font-size:13.5px;margin:4px 0"><b>고객 지역:</b> 상파울루(SP) <b>42%</b> · 리우(RJ) 13% · 미나스(MG) 12% → <b>남동부 대도시 편중</b></p>
+    </div>
+  </div>
+  <div class="note"><b>스토리:</b> 흩어진 6개 CSV가 → 이 파이프라인을 거쳐 → "<b>상파울루의 헬스·뷰티 카테고리가 신용카드로 가장 많이 팔렸고, 2017년 블랙프라이데이에 매출이 폭발했다</b>"는 인사이트가 됐습니다. 아래에서 <b>어떤 파일이 어떤 모델을 거쳐 이 답이 됐는지</b> 추적합니다.</div>
 </section>
 
 <!-- ===================== 1. 왜 dbt ===================== -->
@@ -355,9 +406,79 @@ olist_products ───► stg_products ─────────────
   <div class="good"><b>왜 4단계로 나눌까?</b> 거대한 SQL 하나로도 만들 수 있지만, 단계를 나누면 ① 각 단계를 따로 테스트·재사용하고 ② 문제 발생 시 어디가 잘못됐는지 즉시 찾을 수 있어요. (레고 블록처럼 조립) — 이게 dbt Labs 공식 권장 구조입니다.</div>
 </section>
 
-<!-- ===================== 6. 레이어 상세 ===================== -->
+<!-- ===================== 파일 추적표 ===================== -->
+<section id="trace">
+  <h2><span class="n">6</span> 파일 추적표 — 어떤 CSV가 어떤 마트가 됐나</h2>
+  <p class="lead">이 파이프라인의 핵심 질문: <b>"각 원본 파일은 어디서 와서(source/seed) → 어떻게 정리되고(stg) → 무엇과 합쳐져(int) → 결국 어떤 비즈니스 표(mart)가 됐나?"</b> 한 줄씩 따라가 봅니다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>원본 CSV (들어온 방식)</th>
+        <th>→ staging (ref로 청소)</th>
+        <th>→ intermediate (조립)</th>
+        <th>→ mart (최종 비즈니스 표)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>olist_orders</code> <span class="pill">source</span><br><span style="color:var(--muted);font-size:12.5px">주문 헤더 99,441건</span></td>
+        <td><code>stg_orders</code><br><span style="color:var(--muted);font-size:12.5px">날짜 캐스팅·상태 정리</span></td>
+        <td>—</td>
+        <td><b style="color:var(--gold)">fct_orders</b> → <b style="color:var(--gold)">fct_daily_sales</b><br><span style="color:var(--muted);font-size:12.5px">주문·일별 매출</span></td>
+      </tr>
+      <tr>
+        <td><code>olist_order_items</code> <span class="pill">source</span><br><span style="color:var(--muted);font-size:12.5px">라인아이템 112,650건</span></td>
+        <td><code>stg_order_items</code><br><span style="color:var(--muted);font-size:12.5px">가격·배송비 숫자화</span></td>
+        <td rowspan="2"><b style="color:var(--blue)">int_order_items_enriched</b><br><span style="color:var(--muted);font-size:12.5px">아이템+상품+카테고리 조인, 아이템총액 파생</span></td>
+        <td><b style="color:var(--gold)">fct_orders</b> (아이템 집계)</td>
+      </tr>
+      <tr>
+        <td><code>olist_products</code> <span class="pill">source</span><br><span style="color:var(--muted);font-size:12.5px">상품 32,951건</span></td>
+        <td><code>stg_products</code></td>
+        <td><b style="color:var(--gold)">dim_products</b><br><span style="color:var(--muted);font-size:12.5px">상품+영문 카테고리</span></td>
+      </tr>
+      <tr>
+        <td><code>product_category_<br>name_translation</code> <span class="pill" style="border-color:var(--bronze);color:var(--bronze)">seed</span><br><span style="color:var(--muted);font-size:12.5px">카테고리 번역 71건</span></td>
+        <td>— <span style="color:var(--muted);font-size:12.5px">(seed는 ref로 바로 사용)</span></td>
+        <td>int·dim_products에서<br>영문명 룩업으로 조인</td>
+        <td>(dim_products 카테고리 영문화)</td>
+      </tr>
+      <tr>
+        <td><code>olist_order_payments</code> <span class="pill">source</span><br><span style="color:var(--muted);font-size:12.5px">결제 103,886건</span></td>
+        <td><code>stg_payments</code><br><span style="color:var(--muted);font-size:12.5px">결제수단·금액 정리</span></td>
+        <td>—</td>
+        <td><b style="color:var(--gold)">fct_orders</b> (결제 집계)</td>
+      </tr>
+      <tr>
+        <td><code>olist_customers</code> <span class="pill">source</span><br><span style="color:var(--muted);font-size:12.5px">고객키 99,441건</span></td>
+        <td><code>stg_customers</code></td>
+        <td>—</td>
+        <td><b style="color:var(--gold)">dim_customers</b><br><span style="color:var(--muted);font-size:12.5px">고객·지역</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="grid2">
+    <div class="card" style="margin:14px 0">
+      <h4 style="margin-top:0">📥 들어온 방식 2가지</h4>
+      <p style="font-size:13.5px;margin:4px 0"><span class="pill">source</span> <b>5개</b> — 큰 거래 데이터(주문·아이템·결제·상품·고객). external CSV로 <b>직접 참조</b>(미리 적재 안 함).</p>
+      <p style="font-size:13.5px;margin:4px 0"><span class="pill" style="border-color:var(--bronze);color:var(--bronze)">seed</span> <b>1개</b> — 작고 거의 안 바뀌는 룩업(카테고리 번역). <code>dbt seed</code>로 적재.</p>
+    </div>
+    <div class="card" style="margin:14px 0">
+      <h4 style="margin-top:0">📤 나온 결과 4개 마트</h4>
+      <p style="font-size:13.5px;margin:4px 0"><b style="color:var(--gold)">fct_orders</b> ← orders + int(아이템) + payments 를 <b>order_id로 집계 후 조인</b></p>
+      <p style="font-size:13.5px;margin:4px 0"><b style="color:var(--gold)">fct_daily_sales</b> ← fct_orders를 날짜로 재집계</p>
+      <p style="font-size:13.5px;margin:4px 0"><b style="color:var(--gold)">dim_customers</b> ← stg_customers / <b style="color:var(--gold)">dim_products</b> ← stg_products + 번역 seed</p>
+    </div>
+  </div>
+
+  <div class="note"><b>한눈 요약:</b> raw 6개(<span class="pill">source</span>5 + <span class="pill" style="border-color:var(--bronze);color:var(--bronze)">seed</span>1) → <code>stg_*</code> 5개로 청소 → <code>int_order_items_enriched</code> 하나로 조립 → <b>마트 4개</b>(fct 2 + dim 2). 가장 복잡한 건 <code>fct_orders</code> — 주문·아이템·결제 <b>3갈래</b>를 모아 "주문 1행"으로 만든 핵심 매출 테이블입니다.</div>
+</section>
+
+<!-- ===================== 7. 레이어 상세 ===================== -->
 <section id="layers">
-  <h2><span class="n">6</span> 레이어별 상세 — 무엇을, 왜, 어떻게</h2>
+  <h2><span class="n">7</span> 레이어별 상세 — 무엇을, 왜, 어떻게</h2>
 
   <!-- raw -->
   <div class="layer l-green" style="margin:16px 0">
@@ -432,7 +553,7 @@ renamed <span class="kw">as</span> (
 
 <!-- ===================== 7. 계보 ===================== -->
 <section id="lineage">
-  <h2><span class="n">7</span> 계보(Lineage) — dbt가 자동으로 그려준 지도</h2>
+  <h2><span class="n">8</span> 계보(Lineage) — dbt가 자동으로 그려준 지도</h2>
   <p class="lead">dbt의 가장 멋진 기능: <code>ref()</code>로 연결만 해두면 데이터가 어디서 와서 어디로 가는지 <b>지도를 자동 생성</b>합니다. (<code>dbt docs generate</code> 한 줄) 아래는 실제 <code>dbt docs</code> 화면 캡처입니다.</p>
 
   <figure>
@@ -461,7 +582,7 @@ renamed <span class="kw">as</span> (
 
 <!-- ===================== 8. 테스트 ===================== -->
 <section id="test">
-  <h2><span class="n">8</span> 데이터 테스트 — "이 데이터 믿어도 돼?"</h2>
+  <h2><span class="n">9</span> 데이터 테스트 — "이 데이터 믿어도 돼?"</h2>
   <p class="lead">코드에 버그가 있듯 데이터에도 문제가 생깁니다. dbt는 <b>데이터에 대한 규칙</b>을 걸고 매번 자동 검사해요. <code>dbt test</code> 실행 시 <b>위반 행이 0개면 통과</b>입니다.</p>
 
   <div class="grid2">
@@ -508,7 +629,7 @@ Done. PASS=7 <span class="fail">ERROR=1</span> <span class="warn-t">SKIP=9</span
 
 <!-- ===================== 9. 스냅샷 ===================== -->
 <section id="snapshot">
-  <h2><span class="n">9</span> 스냅샷(Snapshot) — "예전엔 어떤 값이었지?" 이력 추적 <span class="badge new">SCD2</span></h2>
+  <h2><span class="n">10</span> 스냅샷(Snapshot) — "예전엔 어떤 값이었지?" 이력 추적 <span class="badge new">SCD2</span></h2>
   <p class="lead">주문 상태는 시간이 지나며 바뀝니다(shipped → delivered). 보통은 덮어써져 과거가 사라지죠. <b>snapshot</b>은 값이 바뀔 때마다 과거를 보존합니다. (SCD2 = Slowly Changing Dimension Type 2)</p>
 
   <p>실험: <code>orders</code>를 변경가능한 작은 테이블로 만들고(정적 CSV는 그냥은 변화가 안 보임), 한 주문 상태를 <code>shipped → delivered</code>로 <code>UPDATE</code>한 뒤 다시 snapshot을 떴어요. 그 주문이 <b>2줄</b>로 늘어납니다:</p>
@@ -522,7 +643,7 @@ Done. PASS=7 <span class="fail">ERROR=1</span> <span class="warn-t">SKIP=9</span
 
 <!-- ===================== 10. 결과 ===================== -->
 <section id="result">
-  <h2><span class="n">10</span> 결과 — 실제로 나온 매출 리포트</h2>
+  <h2><span class="n">11</span> 결과 — 실제로 나온 매출 리포트</h2>
 
   <div class="kpi">
     <div class="b"><div class="v">45</div><div class="l">테스트 PASS</div></div>
