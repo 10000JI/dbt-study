@@ -1,0 +1,7 @@
+order_id,customer_id,amount,status
+1001,1,120.0,completed
+1002,1,80.0,completed
+1003,2,200.0,shipped
+1004,3,50.0,completed
+1005,3,75.0,returned
+1006,4,300.0,shipped

@@ -1,0 +1,4 @@
+#V2
+SET datafusion.execution.target_partitions = 4;
+CREATE EXTERNAL TABLE orders STORED AS CSV LOCATION 'data/orders.csv' OPTIONS ('has_header' 'true');
+EXPLAIN SELECT status, sum(amount) FROM orders GROUP BY status;
