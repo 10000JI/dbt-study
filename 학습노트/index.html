@@ -131,7 +131,18 @@
   </table>
 
   <h4>우리가 만든 것 — Olist 매출 파이프라인</h4>
-  <p><b>Olist</b>(브라질 이커머스 실데이터, 주문 <b>99,441</b>건)를 <span class="accent">source → staging → intermediate → marts</span> 3계층으로 직접 구축했다.</p>
+  <p>💼 <b>비즈니스 시나리오</b> — <i>"이커머스 매출을 분석하고 싶다: 어떤 상품·고객이 · 얼마를 · 언제 샀나?"</i><br>
+  이 질문에 답하려고 <b>Olist</b>(브라질 이커머스 실데이터, 주문 <b>99,441</b>건)를 <span class="accent">source → staging → intermediate → marts</span> 3계층으로 직접 구축했다. <b>각 계층이 시나리오의 어느 부분을 담당하는지</b>가 아래 구조다.</p>
+
+  <table>
+    <tr><th>계층</th><th>실제 구성요소</th><th>시나리오상 역할</th></tr>
+    <tr><td><span class="pill src">source</span> 원천 5</td><td class="mono">orders · order_items · order_payments · products · customers</td><td>EL이 적재한 raw — 주문 / 주문상품 / 결제 / 상품 / 고객 원본</td></tr>
+    <tr><td><span class="pill seed">seed</span> 1</td><td class="mono">product_category_<wbr>name_translation</td><td>카테고리명 포르투갈어→영어 룩업 (분석 가독성 확보)</td></tr>
+    <tr><td><span class="pill stg">staging</span> 5 <span class="muted">(view)</span></td><td class="mono">stg_orders · stg_order_items · stg_products · stg_payments · stg_customers</td><td>원천 <b>1:1 정리</b> — 타입 캐스팅 · 컬럼명 표준화</td></tr>
+    <tr><td>intermediate 1 <span class="muted">(view)</span></td><td class="mono">int_order_items_enriched</td><td>주문상품 <b>+ 상품 카테고리 결합</b> (마트들이 공유하는 중간블록)</td></tr>
+    <tr><td><span class="pill mart">marts</span> 4 <span class="muted">(table)</span></td><td class="mono">fct_orders · fct_daily_sales · dim_customers · dim_products</td><td>비즈니스 질문에 <b>바로 답하는</b> 최종 지표·차원</td></tr>
+  </table>
+
   <div class="flow">
     <span class="step"><span class="pill src">source</span> raw CSV 5종</span><span class="arw">→</span>
     <span class="step"><span class="pill stg">staging</span> stg_* (정리·표준화)</span><span class="arw">→</span>
@@ -159,8 +170,17 @@
     <p style="margin:0"><b>실습으로 눈으로 확인한 것</b> — ① <code>ref('stg_orders')</code>가 컴파일되면 <code>"olist"."main"."stg_orders"</code> 3단 완전수식으로 치환됨 ② 상위 테스트가 실패하면 하위 모델이 <span class="accent">SKIP</span>되는 "게이트" ③ 원본 한 행을 바꾸니 snapshot에 <code>dbt_valid_from/to</code>로 <b>이력 2행</b>이 생김(SCD2).</p>
   </div>
 
+  <h4>마트 = 비즈니스 질문에 대한 답</h4>
+  <p class="muted">시나리오의 질문들이 각각 하나의 마트로 떨어진다:</p>
+  <table>
+    <tr><th>마트</th><th>답하는 질문</th><th>그레인(1행 단위)</th><th>어디서 왔나</th></tr>
+    <tr><td class="mono">fct_orders</td><td>주문 1건당 매출·상태·결제는?</td><td>주문(order_id)</td><td>stg_orders + int_order_items_enriched + stg_payments</td></tr>
+    <tr><td class="mono">fct_daily_sales</td><td>매출이 날짜별로 어떻게 변하나?</td><td>구매일자</td><td>fct_orders 집계</td></tr>
+    <tr><td class="mono">dim_customers</td><td>고객은 누구·어느 지역인가?</td><td>고객(customer_id)</td><td>stg_customers</td></tr>
+    <tr><td class="mono">dim_products</td><td>상품·카테고리는 무엇인가?</td><td>상품(product_id)</td><td>stg_products + 카테고리 seed</td></tr>
+  </table>
   <div class="card" style="border-color:var(--accent)">
-    <p style="margin:0">💼 <b>비즈니스적으로</b> — 위 Olist 파이프라인이 곧 <b>"매출 지표를 신뢰·재현 가능하게 관리하는 그림"</b>이다. source→마트로 흐르는 변환에 <b>테스트(품질 게이트)</b>와 <b>계보</b>가 붙어, 매출 숫자가 "어디서 왔고 · 믿을 수 있는가 · 바꾸면 무엇이 영향받는가"를 자동으로 보증한다. → 자사 매출 데이터에 대입하면 = <b>변환 거버넌스</b>(흩어진 SQL을 버전관리·품질·계보로 통제).</p>
+    <p style="margin:0">💼 <b>이 구조가 비즈니스에 주는 것</b> — 매출 지표(fct/dim)가 <b>source→마트</b>로 흐르며 각 단계에 <b>테스트(품질 게이트)</b>와 <b>계보</b>가 붙는다. 그래서 "이 매출 숫자가 <b>어디서 왔고 · 믿을 수 있고 · 바꾸면 무엇이 영향받나</b>"를 자동 보증 → <b>변환 거버넌스</b>. 위 계보 그래프가 바로 그 자동 추적의 산출물이다.</p>
   </div>
 
   <hr>
@@ -181,9 +201,13 @@
   </div>
   <p class="muted"><code>EXPLAIN</code>을 찍으면 이 단계가 그대로 보인다. 우리는 이걸 실제로 관찰했다.</p>
 
-  <h4>EXPLAIN에서 본 "병렬 처리"의 실체</h4>
-  <p>같은 조인+집계 쿼리를 6행 샘플 → 10만행 실데이터로 키우자, 실행계획이 달라졌다:</p>
-  <pre><span class="m"># Olist 17MB CSV를 스캔하는 물리계획 (일부)</span>
+  <h4>시나리오 → 실행계획: 각 연산자는 왜 태어났나</h4>
+  <p>💼 <b>비즈니스 질문</b> — <i>"주문 상태별 총 매출은 얼마인가?"</i> 이 한 질문이 SQL이 되고, SQL이 실행계획을 낳는다. <b>계획의 연산자 하나하나가 질문의 특정 요소에서 태어난다.</b></p>
+  <pre><span class="m"># ① 질문을 SQL로</span>
+SELECT o.order_status, sum(p.payment_value)
+FROM   orders o JOIN payments p ON o.order_id = p.order_id
+GROUP  BY o.order_status;</pre>
+  <pre><span class="m"># ② DataFusion이 만든 물리계획 (Olist 17MB, 일부)</span>
 AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계</span>
   RepartitionExec: Hash([order_status], <span class="o">8</span>)  <span class="m">← 8갈래 병렬 재분배</span>
     AggregateExec: mode=Partial                <span class="m">← 부분 집계(2단계)</span>
@@ -191,6 +215,16 @@ AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계<
         DataSourceExec: file_groups={<span class="o">8 groups</span>:   <span class="m">← 17MB 파일을</span>
           [orders.csv:0..2206865],             <span class="m">   8개 바이트범위로</span>
           [..4413730], [..6620595], ...}       <span class="m">   나눠 동시 스캔!</span></pre>
+
+  <table>
+    <tr><th>③ 시나리오 요소</th><th>→ 태어난 연산자</th><th>왜 이 연산자인가</th></tr>
+    <tr><td>17MB 주문 CSV를 <b>읽어야</b> 함</td><td class="mono">DataSourceExec (8 file_groups)</td><td>큰 파일을 8개 바이트범위로 쪼개 <b>8코어가 동시 스캔</b></td></tr>
+    <tr><td>주문+결제를 <b>order_id로 결합</b></td><td class="mono">HashJoinExec</td><td>조인이 필요 → 옵티마이저가 <b>해시 조인</b> 선택</td></tr>
+    <tr><td>상태별로 묶어 <b>합산(GROUP BY)</b></td><td class="mono">AggregateExec (Partial→Final)</td><td>코어별 <b>부분집계 후 최종 병합</b> = 2단계 병렬 집계</td></tr>
+    <tr><td>8코어를 <b>다 쓰기</b></td><td class="mono">RepartitionExec Hash([status],8)</td><td>같은 상태를 <b>같은 파티션에 모아야</b> 병렬 집계가 정확</td></tr>
+  </table>
+  <p class="muted">→ 즉 실행계획은 "질문을 어떻게 병렬로 풀지"를 DataFusion이 스스로 설계한 결과다. <b>부분집계·해시조인·파티션 재분배 모두 이 시나리오가 낳은 것.</b></p>
+
   <div class="card tight">
     <p style="margin:0">🔑 <b>파티션 8 = CPU 코어 8개.</b> DataFusion은 기본적으로 "가진 코어를 다 써서" 병렬 처리한다(<code>target_partitions</code>). 큰 파일은 <b>파일 자체를 바이트 구간으로 쪼개</b> 여러 코어가 동시에 읽는다. → 이론의 "벡터화·멀티스레드·파티션 병렬"이 계획에 그대로 박혀 있음을 확인.</p>
   </div>
