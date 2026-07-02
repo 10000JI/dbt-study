@@ -76,6 +76,15 @@
 
   <p class="lead">이 문서는 <b>dbt를 모르는 사람도</b> 이해할 수 있도록, 두 도구가 <b>무엇이고 · 어떻게 흐르고 · 왜 필요한지</b>를 실습 결과와 함께 정리한 것입니다.</p>
 
+  <!-- ================= 비즈니스 배경 ================= -->
+  <h2 class="section">Why · 비즈니스 배경</h2>
+  <h3 class="title">왜 이 두 도구를 살펴봤나</h3>
+  <div class="card">
+    <p style="margin-top:0">자사는 <b>Spark 기반 분산 ETL/ELT 플랫폼(DidimDP)</b>을 운영 중이다. 한편 데이터 생태계에서는 <span class="accent">dbt</span>(ELT 변환 표준 도구)와 <span class="df-c">DataFusion</span>(Arrow 기반 차세대 쿼리 엔진)이 빠르게 확산되고 있다.</p>
+    <p><b>목적</b> — 이 신규 도구의 <b>특성·동작 원리를 직접 체득</b>해 향후 <b>기술 검토·개선 논의의 판단 재료</b>로 삼는다. 개념 수준이 아니라 <b>직접 명령어로 검증</b>하고 <b>동작하는 POC</b>로 감을 잡는 데 초점을 뒀다.</p>
+    <p class="muted" style="margin-bottom:0">※ 본 학습은 <b>검토·체득이 목적</b>이며, 자사 플랫폼과의 본격 비교분석·도입 여부는 <b>별도 후속 과제</b>다. 아래 "자사 스택 관점"은 결론이 아니라 <b>검토 관점</b>으로 읽어주세요.</p>
+  </div>
+
   <!-- ================= 큰 그림 ================= -->
   <h2 class="section">The Big Picture</h2>
   <h3 class="title">한 문장으로: 둘은 하는 일이 다르다</h3>
@@ -212,6 +221,61 @@ AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계<
     <tr><td>결과물</td><td>신뢰할 수 있는 데이터 모델 + 계보</td><td>쿼리 결과(Arrow)</td></tr>
   </table>
   <p class="muted">둘은 층이 다르다. 실무에선 <b>dbt가 변환을 관리하고, 그 SQL을 DuckDB·DataFusion 같은 엔진이 실행</b>하는 조합이 자연스럽다.</p>
+
+  <hr>
+
+  <!-- ================= 자사 스택 포지셔닝 ================= -->
+  <h2 class="section">Business · 자사 스택 관점</h2>
+  <h3 class="title">Spark/DidimDP 옆에서 — 대체가 아니라 보완</h3>
+  <p>두 도구는 기존 Spark 스택을 <b>대체하는 관계가 아니다.</b> 오히려 각각 <b>다른 계층</b>에서 붙을 수 있다.</p>
+  <table>
+    <tr><th></th><th>Spark / DidimDP</th><th>🛠 dbt</th><th>⚡ DataFusion</th></tr>
+    <tr><td>계층</td><td>분산 <b>실행</b> 엔진·플랫폼</td><td>변환 <b>관리</b> 계층</td><td>단일노드 <b>실행</b> 엔진</td></tr>
+    <tr><td>규모</td><td>대용량·분산(다노드)</td><td>규모 무관(엔진에 위임)</td><td>단일노드·벡터화</td></tr>
+    <tr><td>라이선스</td><td>—</td><td>Apache 2.0 (무료 OSS)</td><td>Apache 2.0 (무료 OSS)</td></tr>
+    <tr><td>자사 스택과의 접점</td><td>현행 기반</td><td><b>dbt-spark 어댑터로 Spark 위에 얹힘</b> — 변환 규율을 기존 실행 위에</td><td><b>Comet 플러그인으로 Spark 실행을 네이티브 가속</b>(Apple 기여), 또는 경량 워크로드용</td></tr>
+  </table>
+  <div class="card tight">
+    <p style="margin:0">🔑 <b>핵심 포지셔닝</b> — dbt는 "무엇을 어떤 순서로 변환할지"를 <b>관리</b>하는 규율 계층이라 <b>Spark 실행 위에도 올릴 수 있고</b>, DataFusion은 분산이 필요 없는 <b>경량·임베디드 처리</b>나 <b>Spark 가속(Comet)</b>의 재료가 될 수 있다. → "교체" 프레임보다 "<b>어느 계층에 어떻게 보완할까</b>" 프레임이 적절.</p>
+  </div>
+
+  <!-- ================= 활용 시나리오 ================= -->
+  <h2 class="section">Business · 활용 시나리오</h2>
+  <h3 class="title">어디에 쓰면 좋은가 &amp; 기대효과</h3>
+  <div class="grid2">
+    <div class="card">
+      <h4 style="margin-top:0">🛠 dbt가 맞는 상황</h4>
+      <ul style="margin:0;padding-left:18px">
+        <li>흩어진 <b>변환 SQL의 거버넌스</b>(버전관리·코드리뷰)</li>
+        <li>배포 전 <b>데이터 품질 게이트</b>(테스트 실패 → 하위 중단)</li>
+        <li><b>계보(lineage)로 온보딩·영향분석</b> — "이 지표 어디서 왔나" 자동 추적</li>
+      </ul>
+      <p class="muted" style="margin-bottom:0"><b>기대효과</b> — 재현성·신뢰성·협업, 문서 자동화.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">⚡ DataFusion이 맞는 상황</h4>
+      <ul style="margin:0;padding-left:18px">
+        <li>분산까지 불필요한 <b>경량 단일노드 분석</b>(Spark 오버헤드 회피)</li>
+        <li><b>Parquet·Arrow 파이프라인</b>의 빠른 처리·상호운용</li>
+        <li>제품/도구에 <b>임베드형 엔진</b>, 또는 <b>Spark 가속(Comet)</b> 검토</li>
+      </ul>
+      <p class="muted" style="margin-bottom:0"><b>기대효과</b> — 경량 워크로드 비용·지연 절감, Arrow 제로카피 연동.</p>
+    </div>
+  </div>
+
+  <!-- ================= 우리 케이스 ================= -->
+  <h2 class="section">Business · 우리가 써본 케이스</h2>
+  <h3 class="title">매출 도메인으로 직접 검증 (Olist)</h3>
+  <p>추상 논의가 아니라, 친숙한 <b>매출(이커머스) 도메인</b>을 소재로 두 도구를 <b>같은 실데이터</b>(Olist, 주문 10만 건)에 적용해봤다.</p>
+  <table>
+    <tr><th>도구</th><th>무엇을 했나</th><th>비즈니스적 의미</th></tr>
+    <tr><td>🛠 dbt</td><td>source→staging→마트로 <b>매출 파이프라인</b> 구축 + 테스트·계보</td><td>매출 지표를 <b>신뢰·재현 가능</b>하게 관리하는 그림</td></tr>
+    <tr><td>⚡ DataFusion</td><td>같은 데이터로 집계·조인·<b>Parquet 변환</b>·UDF</td><td>같은 매출 데이터를 <b>경량 엔진</b>으로 빠르게 처리하는 그림</td></tr>
+    <tr><td>🦆 vs DuckDB</td><td>동일 쿼리를 두 엔진에서 <b>결과·속도 비교</b></td><td>엔진 선택 시 <b>정합성·성능 판단 근거</b> 확보</td></tr>
+  </table>
+  <p class="muted">→ "우리 매출 데이터에 대입하면 어떤 모습인가"를 작은 규모로 미리 그려본 셈. 이 감각이 향후 기술 검토의 출발점이 된다.</p>
+
+  <hr>
 
   <!-- ================= 정리 ================= -->
   <h2 class="section">Wrap-up</h2>
