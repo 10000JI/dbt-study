@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dbt & Apache DataFusion 학습 정리</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#171d2b; --panel2:#1e2636; --ink:#e8edf6; --muted:#9aa7bd;
+    --line:#2a3550; --accent:#ff694a; --df:#33c2c2; --gold:#e6b800; --green:#4caf6d;
+    --code:#0c101a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.7;font-size:16px}
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px 100px}
+  header.cover{padding:70px 20px 50px;text-align:center;border-bottom:1px solid var(--line);
+    background:radial-gradient(1200px 400px at 50% -50px,#1c2740 0,transparent 70%)}
+  header.cover h1{font-size:42px;margin:0 0 10px;letter-spacing:-.5px}
+  header.cover .sub{color:var(--muted);font-size:18px}
+  header.cover .badges{margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .badge{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted)}
+  h2.section{font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+    margin:60px 0 6px;font-weight:700}
+  h2.section.df{color:var(--df)}
+  h3.title{font-size:30px;margin:0 0 18px;letter-spacing:-.5px}
+  h4{font-size:20px;margin:34px 0 10px}
+  p{margin:12px 0}
+  .lead{font-size:18px;color:#cdd6e6}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:18px 0}
+  .card.tight{padding:16px 20px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .muted{color:var(--muted)}
+  .accent{color:var(--accent);font-weight:600}
+  .df-c{color:var(--df);font-weight:600}
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  code{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:13.5px;color:#d7e0f0}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+  pre .g{color:var(--green)} pre .y{color:var(--gold)} pre .b{color:var(--df)} pre .m{color:var(--muted)} pre .o{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd6e6}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;margin:14px 0}
+  .flow .step{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .flow .arw{color:var(--accent);font-weight:700}
+  .fig{margin:20px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0a3d4d}
+  .fig img{display:block;width:100%}
+  .fig .cap{background:var(--panel);padding:10px 16px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line)}
+  .kpi{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}
+  .kpi .k{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .kpi .k b{display:block;font-size:26px;color:#fff}
+  .kpi .k span{font-size:13px;color:var(--muted)}
+  .pill{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600}
+  .pill.src{background:#1c3d28;color:#7fe0a0} .pill.stg{background:#33405c;color:#c7d3ea}
+  .pill.mart{background:#4a3d12;color:#f0d477} .pill.seed{background:#4a2a18;color:#f0a878}
+  hr{border:0;border-top:1px solid var(--line);margin:50px 0}
+  .foot{color:var(--muted);font-size:13px;text-align:center;margin-top:60px}
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <h1>dbt &amp; Apache DataFusion</h1>
+  <div class="sub">데이터 변환 도구와 쿼리 엔진을 직접 실습하며 배운 것 — 핸즈온 학습 정리</div>
+  <div class="badges">
+    <span class="badge">🛠 dbt-core 1.11 + dbt-duckdb</span>
+    <span class="badge">⚡ Apache DataFusion 54</span>
+    <span class="badge">🦆 DuckDB</span>
+    <span class="badge">📦 실데이터: Olist (브라질 이커머스)</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <p class="lead">이 문서는 <b>dbt를 모르는 사람도</b> 이해할 수 있도록, 두 도구가 <b>무엇이고 · 어떻게 흐르고 · 왜 필요한지</b>를 실습 결과와 함께 정리한 것입니다.</p>
+
+  <!-- ================= 큰 그림 ================= -->
+  <h2 class="section">The Big Picture</h2>
+  <h3 class="title">한 문장으로: 둘은 하는 일이 다르다</h3>
+  <div class="grid2">
+    <div class="card">
+      <h4 style="margin-top:0">🛠 <span class="accent">dbt</span> = 변환을 <b>관리</b>하는 도구</h4>
+      <p class="muted">SQL 변환 로직을 <b>버전관리·테스트·문서화·순서관리</b>. 직접 연산은 안 함(엔진 없음). 창고에 "이 SQL 실행해줘"라고 <b>떠넘김</b>.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">⚡ <span class="df-c">DataFusion</span> / 🦆 DuckDB = 실제 <b>연산</b> 엔진</h4>
+      <p class="muted">데이터를 메모리에 올려 <b>직접 계산</b>(집계·조인). SQL을 진짜로 실행하는 쪽. dbt가 만든 SQL이 결국 이런 엔진 위에서 돈다.</p>
+    </div>
+  </div>
+  <div class="card tight">
+    <p style="margin:0"><b>비유</b> — dbt는 <span class="accent">레시피북 + 주문서</span>(뭘 어떤 순서로 만들지 관리), DataFusion·DuckDB는 <span class="df-c">주방 + 오븐</span>(실제로 요리). 그래서 둘은 경쟁이 아니라 <b>같이 쓰는 사이</b>다.</p>
+  </div>
+
+  <div class="flow">
+    <span class="step">원천 데이터(CSV/DB)</span><span class="arw">→</span>
+    <span class="step">적재(EL)</span><span class="arw">→</span>
+    <span class="step" style="border-color:var(--accent)"><b>dbt</b> = 변환(T) 관리</span><span class="arw">→</span>
+    <span class="step" style="border-color:var(--df)"><b>엔진</b>이 실제 연산</span><span class="arw">→</span>
+    <span class="step">BI / 분석</span>
+  </div>
+  <p class="muted" style="font-size:14px">※ 요즘 표준은 <b>ELT</b>(먼저 적재하고, 창고 안에서 SQL로 변환). dbt는 그 "변환(T)"을 담당한다.</p>
+
+  <hr>
+
+  <!-- ================= PART 1 : dbt ================= -->
+  <h2 class="section">Part 1</h2>
+  <h3 class="title">🛠 dbt — SQL 변환을 소프트웨어처럼</h3>
+
+  <p>dbt는 분석가가 <b>SQL <code>SELECT</code>문만</b> 작성하면, 그것을 <b>버전관리·테스트·문서화·의존성관리</b>되는 데이터 모델로 바꿔준다. "여기저기 흩어진 SQL 스크립트" 문제를 푸는 도구.</p>
+
+  <h4>핵심 개념 6가지</h4>
+  <table>
+    <tr><th>개념</th><th>한 줄 설명</th></tr>
+    <tr><td><code>model</code></td><td>변환 하나 = <code>.sql</code> 파일 하나(<code>SELECT</code>문). 실행하면 뷰/테이블로 생성됨</td></tr>
+    <tr><td><code>source()</code></td><td>외부에서 적재된 <b>raw 테이블</b>을 가리킴 (파이프라인 입구)</td></tr>
+    <tr><td><code>ref()</code></td><td>dbt가 만든 다른 모델을 가리킴 → <b>실행 순서(DAG)를 자동 결정</b></td></tr>
+    <tr><td>test</td><td>데이터 품질 단언(unique·not_null·관계 등). 실패 시 하위 빌드 중단</td></tr>
+    <tr><td>materialization</td><td>모델을 <b>view</b>로 만들지 <b>table</b>로 만들지 전략</td></tr>
+    <tr><td>snapshot</td><td>바뀌는 원본의 <b>변경 이력(SCD2)</b>을 기록</td></tr>
+  </table>
+
+  <h4>우리가 만든 것 — Olist 매출 파이프라인</h4>
+  <p><b>Olist</b>(브라질 이커머스 실데이터, 주문 <b>99,441</b>건)를 <span class="accent">source → staging → intermediate → marts</span> 3계층으로 직접 구축했다.</p>
+  <div class="flow">
+    <span class="step"><span class="pill src">source</span> raw CSV 5종</span><span class="arw">→</span>
+    <span class="step"><span class="pill stg">staging</span> stg_* (정리·표준화)</span><span class="arw">→</span>
+    <span class="step">int_order_items_enriched</span><span class="arw">→</span>
+    <span class="step"><span class="pill mart">marts</span> fct_orders · fct_daily_sales · dim_*</span>
+  </div>
+
+  <div class="fig">
+    <img src="img/lineage.png" alt="dbt 계보(lineage) 그래프 — source에서 staging, intermediate, marts, test까지의 전체 DAG">
+    <div class="cap">▲ <b>dbt docs가 자동 생성한 계보(lineage) 그래프.</b>
+      <span class="pill src">초록=source</span> <span class="pill seed">주황=seed</span> <span class="pill stg">회색=staging/intermediate</span> <span class="pill mart">노랑=marts</span> <span style="color:var(--df)">청록=test/snapshot</span>.
+      왼쪽 원천에서 오른쪽 마트로 데이터가 흐르는 의존관계를 <code>ref()</code>만 보고 dbt가 스스로 그린다.</div>
+  </div>
+
+  <p class="muted">이 그래프의 핵심: 개발자는 순서를 <b>한 번도 지정하지 않았다.</b> 각 모델이 <code>ref('...')</code>로 "나는 이걸 참조한다"만 적으면, dbt가 전체 의존성을 계산해 <b>올바른 실행 순서(DAG)</b>를 자동으로 만든다.</p>
+
+  <div class="kpi">
+    <div class="k"><b>45</b><span>dbt build 통과 (모델+테스트)</span></div>
+    <div class="k"><b>3</b><span>레이어 (staging·int·marts)</span></div>
+    <div class="k"><b>SCD2</b><span>snapshot 이력 관찰 성공</span></div>
+    <div class="k"><b>0</b><span>실데이터 ERROR</span></div>
+  </div>
+
+  <div class="card tight">
+    <p style="margin:0"><b>실습으로 눈으로 확인한 것</b> — ① <code>ref('stg_orders')</code>가 컴파일되면 <code>"olist"."main"."stg_orders"</code> 3단 완전수식으로 치환됨 ② 상위 테스트가 실패하면 하위 모델이 <span class="accent">SKIP</span>되는 "게이트" ③ 원본 한 행을 바꾸니 snapshot에 <code>dbt_valid_from/to</code>로 <b>이력 2행</b>이 생김(SCD2).</p>
+  </div>
+
+  <hr>
+
+  <!-- ================= PART 2 : DataFusion ================= -->
+  <h2 class="section df">Part 2</h2>
+  <h3 class="title">⚡ Apache DataFusion — Arrow 기반 쿼리 엔진</h3>
+
+  <p><b>DataFusion</b>은 Rust로 작성된, <b>Apache Arrow</b>(컬럼형 인메모리 포맷)를 쓰는 <b>쿼리 실행 엔진</b>이다. dbt와 달리 <b>직접 연산</b>한다. SQL과 DataFrame API를 둘 다 제공한다.</p>
+
+  <h4>쿼리가 실행되는 흐름</h4>
+  <div class="flow" style="font-size:13px">
+    <span class="step">SQL 문자열</span><span class="arw">→</span>
+    <span class="step">LogicalPlan(논리계획)</span><span class="arw">→</span>
+    <span class="step">논리 최적화</span><span class="arw">→</span>
+    <span class="step">PhysicalPlan(물리계획)</span><span class="arw">→</span>
+    <span class="step">실행 = Arrow 결과</span>
+  </div>
+  <p class="muted"><code>EXPLAIN</code>을 찍으면 이 단계가 그대로 보인다. 우리는 이걸 실제로 관찰했다.</p>
+
+  <h4>EXPLAIN에서 본 "병렬 처리"의 실체</h4>
+  <p>같은 조인+집계 쿼리를 6행 샘플 → 10만행 실데이터로 키우자, 실행계획이 달라졌다:</p>
+  <pre><span class="m"># Olist 17MB CSV를 스캔하는 물리계획 (일부)</span>
+AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계</span>
+  RepartitionExec: Hash([order_status], <span class="o">8</span>)  <span class="m">← 8갈래 병렬 재분배</span>
+    AggregateExec: mode=Partial                <span class="m">← 부분 집계(2단계)</span>
+      HashJoinExec                             <span class="m">← 해시 조인</span>
+        DataSourceExec: file_groups={<span class="o">8 groups</span>:   <span class="m">← 17MB 파일을</span>
+          [orders.csv:0..2206865],             <span class="m">   8개 바이트범위로</span>
+          [..4413730], [..6620595], ...}       <span class="m">   나눠 동시 스캔!</span></pre>
+  <div class="card tight">
+    <p style="margin:0">🔑 <b>파티션 8 = CPU 코어 8개.</b> DataFusion은 기본적으로 "가진 코어를 다 써서" 병렬 처리한다(<code>target_partitions</code>). 큰 파일은 <b>파일 자체를 바이트 구간으로 쪼개</b> 여러 코어가 동시에 읽는다. → 이론의 "벡터화·멀티스레드·파티션 병렬"이 계획에 그대로 박혀 있음을 확인.</p>
+  </div>
+
+  <h4>더 해본 것</h4>
+  <div class="grid2">
+    <div class="card tight"><b>CSV → Parquet</b><br><span class="muted">17.7MB → 6.2MB (<b>2.8배 압축</b>). 게다가 쿼리가 쓰는 <b>컬럼만</b> 디스크에서 읽음(컬럼형 저장의 이점).</span></div>
+    <div class="card tight"><b>UDF (사용자 정의 함수)</b><br><span class="muted">결제액을 low/mid/high로 나누는 <code>pay_bucket()</code>을 직접 만들어 <b>SQL에서 호출</b>. → 엔진 확장성.</span></div>
+  </div>
+
+  <h4>🦆 DuckDB와 나란히 비교</h4>
+  <p>같은 "월별 매출" 쿼리를 <b>DataFusion</b>과 <b>DuckDB</b> 두 엔진에서 돌렸다(둘 다 로컬 임베디드 분석 엔진).</p>
+  <table>
+    <tr><th>비교 축</th><th>결과</th></tr>
+    <tr><td>결과값(정합성)</td><td><b>완전 일치</b> — 25개월 매출 동일 (2017-11 피크 ~119만)</td></tr>
+    <tr><td>API 사용감</td><td>DataFusion: <code>register_csv</code> 후 <code>sql()</code> / DuckDB: 파일을 <code>FROM '...'</code>에 직접</td></tr>
+    <tr><td>SQL 방언</td><td>DuckDB는 <code>month</code>가 예약어라 별칭 불가 → 엔진마다 문법이 미묘하게 다름</td></tr>
+    <tr><td>속도(10만행, 참고)</td><td>DataFusion 184ms / DuckDB 310ms</td></tr>
+  </table>
+
+  <hr>
+
+  <!-- ================= PART 3 : 비교 ================= -->
+  <h2 class="section">Part 3</h2>
+  <h3 class="title">🛠 dbt vs ⚡ DataFusion — 한눈에</h3>
+  <table>
+    <tr><th></th><th>🛠 dbt</th><th>⚡ DataFusion / 🦆 DuckDB</th></tr>
+    <tr><td>정체</td><td>변환 <b>오케스트레이터</b></td><td>쿼리 <b>실행 엔진</b></td></tr>
+    <tr><td>연산 엔진</td><td><b>없음</b> (SQL을 엔진에 떠넘김)</td><td><b>있음</b> (직접 계산)</td></tr>
+    <tr><td>하는 일</td><td>버전관리·테스트·문서·의존성(DAG)</td><td>스캔·조인·집계 실행</td></tr>
+    <tr><td>데이터 보관</td><td>안 함</td><td>메모리에 올려 처리</td></tr>
+    <tr><td>결과물</td><td>신뢰할 수 있는 데이터 모델 + 계보</td><td>쿼리 결과(Arrow)</td></tr>
+  </table>
+  <p class="muted">둘은 층이 다르다. 실무에선 <b>dbt가 변환을 관리하고, 그 SQL을 DuckDB·DataFusion 같은 엔진이 실행</b>하는 조합이 자연스럽다.</p>
+
+  <!-- ================= 정리 ================= -->
+  <h2 class="section">Wrap-up</h2>
+  <h3 class="title">정리 &amp; 자사 스택 관점</h3>
+  <div class="card">
+    <ul style="margin:0;padding-left:20px">
+      <li><b>dbt</b>: SQL 변환을 소프트웨어 공학(버전관리·테스트·문서·CI)으로 끌어올리는 도구. "흩어진 SQL" 문제를 DAG·테스트·계보로 해결.</li>
+      <li><b>DataFusion</b>: Arrow 기반의 빠른 단일노드 쿼리 엔진. EXPLAIN으로 <b>파티션 병렬·pushdown</b>을 눈으로 확인. Parquet·UDF·DuckDB 비교까지 체득.</li>
+      <li><b>자사 스택(Spark) 관점</b>: dbt는 "변환 계층 관리", DataFusion은 "단일노드 벡터화 엔진"으로, 분산 처리(Spark)와는 층·목적이 다름. 변환 규율(dbt)과 엔진 특성(DataFusion) 각각을 비교 검토의 재료로 활용 가능. <span class="muted">(도입 여부는 별도 과제)</span></li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    핸즈온 학습 정리 · dbt(jaffle→Olist) + DataFusion(샘플→Olist) · 실습 레포/로그 별도 보관<br>
+    데이터 출처: Olist Brazilian E-Commerce (CC BY-NC, 학습용)
+  </div>
+
+</div>
+</body>
+</html>
