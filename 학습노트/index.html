@@ -159,6 +159,10 @@
     <p style="margin:0"><b>실습으로 눈으로 확인한 것</b> — ① <code>ref('stg_orders')</code>가 컴파일되면 <code>"olist"."main"."stg_orders"</code> 3단 완전수식으로 치환됨 ② 상위 테스트가 실패하면 하위 모델이 <span class="accent">SKIP</span>되는 "게이트" ③ 원본 한 행을 바꾸니 snapshot에 <code>dbt_valid_from/to</code>로 <b>이력 2행</b>이 생김(SCD2).</p>
   </div>
 
+  <div class="card" style="border-color:var(--accent)">
+    <p style="margin:0">💼 <b>비즈니스적으로</b> — 위 Olist 파이프라인이 곧 <b>"매출 지표를 신뢰·재현 가능하게 관리하는 그림"</b>이다. source→마트로 흐르는 변환에 <b>테스트(품질 게이트)</b>와 <b>계보</b>가 붙어, 매출 숫자가 "어디서 왔고 · 믿을 수 있는가 · 바꾸면 무엇이 영향받는가"를 자동으로 보증한다. → 자사 매출 데이터에 대입하면 = <b>변환 거버넌스</b>(흩어진 SQL을 버전관리·품질·계보로 통제).</p>
+  </div>
+
   <hr>
 
   <!-- ================= PART 2 : DataFusion ================= -->
@@ -206,6 +210,10 @@ AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계<
     <tr><td>SQL 방언</td><td>DuckDB는 <code>month</code>가 예약어라 별칭 불가 → 엔진마다 문법이 미묘하게 다름</td></tr>
     <tr><td>속도(10만행, 참고)</td><td>DataFusion 184ms / DuckDB 310ms</td></tr>
   </table>
+
+  <div class="card" style="border-color:var(--df)">
+    <p style="margin:0">💼 <b>비즈니스적으로</b> — 위 작업은 같은 매출 데이터를 <b>"경량 엔진으로 빠르게 처리하는 그림"</b>이다. 분산(Spark) 없이 단일노드로 10만 건 집계·<b>Parquet 변환</b>까지 처리. DuckDB와 나란히 비교한 것은 곧 <b>"엔진 선택 시 정합성·성능 판단 근거"</b>를 확보한 셈 — <b>결과는 같고 방언·속도·사용감이 다르다</b>는 실측. → 자사 매출 데이터에 대입하면 = <b>경량 워크로드에 Spark 오버헤드 없이</b> 처리하는 선택지 검토.</p>
+  </div>
 
   <hr>
 
@@ -262,18 +270,6 @@ AggregateExec: mode=FinalPartitioned          <span class="m">← 최종 집계<
       <p class="muted" style="margin-bottom:0"><b>기대효과</b> — 경량 워크로드 비용·지연 절감, Arrow 제로카피 연동.</p>
     </div>
   </div>
-
-  <!-- ================= 우리 케이스 ================= -->
-  <h2 class="section">Business · 우리가 써본 케이스</h2>
-  <h3 class="title">매출 도메인으로 직접 검증 (Olist)</h3>
-  <p>추상 논의가 아니라, 친숙한 <b>매출(이커머스) 도메인</b>을 소재로 두 도구를 <b>같은 실데이터</b>(Olist, 주문 10만 건)에 적용해봤다.</p>
-  <table>
-    <tr><th>도구</th><th>무엇을 했나</th><th>비즈니스적 의미</th></tr>
-    <tr><td>🛠 dbt</td><td>source→staging→마트로 <b>매출 파이프라인</b> 구축 + 테스트·계보</td><td>매출 지표를 <b>신뢰·재현 가능</b>하게 관리하는 그림</td></tr>
-    <tr><td>⚡ DataFusion</td><td>같은 데이터로 집계·조인·<b>Parquet 변환</b>·UDF</td><td>같은 매출 데이터를 <b>경량 엔진</b>으로 빠르게 처리하는 그림</td></tr>
-    <tr><td>🦆 vs DuckDB</td><td>동일 쿼리를 두 엔진에서 <b>결과·속도 비교</b></td><td>엔진 선택 시 <b>정합성·성능 판단 근거</b> 확보</td></tr>
-  </table>
-  <p class="muted">→ "우리 매출 데이터에 대입하면 어떤 모습인가"를 작은 규모로 미리 그려본 셈. 이 감각이 향후 기술 검토의 출발점이 된다.</p>
 
   <hr>
 
