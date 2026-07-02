@@ -143,6 +143,13 @@
     <tr><td><span class="pill mart">marts</span> 4 <span class="muted">(table)</span></td><td class="mono">fct_orders · fct_daily_sales · dim_customers · dim_products</td><td>비즈니스 질문에 <b>바로 답하는</b> 최종 지표·차원</td></tr>
   </table>
 
+  <p class="muted" style="font-size:13.5px;border-left:3px solid var(--line);padding:6px 0 6px 14px;margin:14px 0">
+    ✱ <b>source가 왜 5개, seed가 왜 1개?</b> 기준은 "어디서 왔나"가 아니라 <b>dbt 프로젝트(레포) 기준 외부냐 내부냐</b>다.<br>
+    <b class="accent">source = 외부</b> — 프로젝트 <b>밖</b>의 raw를 <b>가리키기만</b> 함(크고 계속 쌓이는 운영 데이터) &nbsp;·&nbsp;
+    <b style="color:#f0a878">seed = 내부</b> — 프로젝트 <b>안</b>(<code>seeds/</code>)에 파일을 품고 git 커밋 → <code>dbt seed</code>로 직접 적재(작고 안 바뀌는 사전·코드표).<br>
+    <span style="opacity:.85">※ 이번 학습에선 6개 CSV를 모두 Kaggle에서 받았지만, <b>실무 역할대로</b> 운영성 5종은 source(외부 적재 가정), 71행 카테고리 번역표는 seed(내부 참조)로 나눴다.</span>
+  </p>
+
   <div class="flow">
     <span class="step"><span class="pill src">source</span> raw CSV 5종</span><span class="arw">→</span>
     <span class="step"><span class="pill stg">staging</span> stg_* (정리·표준화)</span><span class="arw">→</span>
